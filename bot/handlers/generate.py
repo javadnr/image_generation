@@ -2,6 +2,7 @@ import os
 import logging
 from aiogram import Router, F
 from aiogram.types import Message, BufferedInputFile
+from bot.config import settings
 from bot.services.user import get_or_create_user, check_and_reset_daily, can_generate, consume_quota, set_generating, save_image, get_tier_limit, get_remaining
 from bot.services.queue import acquire_queue, release_queue
 from bot.services.image import generate_image
@@ -73,18 +74,29 @@ async def handle_generate(message: Message, session):
         user_dir = os.path.join(IMAGES_DIR, str(user.telegram_id))
         os.makedirs(user_dir, exist_ok=True)
 
-        photo = BufferedInputFile(image_bytes, filename="image.png")
-        sent_msg = await message.answer_photo(
-            photo=photo,
-            caption=f"✅ {message.text[:100]}",
-        )
-
-        file_path = os.path.join(user_dir, f"{sent_msg.message_id}.png")
+        file_path = os.path.join(user_dir, f"gen_{message.message_id}.png")
         with open(file_path, "wb") as f:
             f.write(image_bytes)
 
+        if settings.API_SERVER == "bale":
+            from bot.utils.bale_upload import send_photo_bytes_raw
+            result = await send_photo_bytes_raw(
+                token=settings.BOT_TOKEN,
+                chat_id=message.chat.id,
+                image_bytes=image_bytes,
+                caption=f"✅ {message.text[:100]}",
+            )
+            sent_msg_id = result.get("result", {}).get("message_id", 0)
+        else:
+            photo = BufferedInputFile(image_bytes, filename="image.png")
+            sent_msg = await message.answer_photo(
+                photo=photo,
+                caption=f"✅ {message.text[:100]}",
+            )
+            sent_msg_id = sent_msg.message_id
+
         await consume_quota(session, user)
-        await save_image(session, user, sent_msg.message_id, file_path, message.text)
+        await save_image(session, user, sent_msg_id, file_path, message.text)
 
     except Exception as e:
         logging.error("Image generation failed: %s", e, exc_info=True)
