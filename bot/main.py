@@ -2,6 +2,8 @@ import asyncio
 import logging
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
+from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.client.telegram import TelegramAPIServer
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 import pytz
@@ -49,14 +51,25 @@ async def on_startup():
             await session.commit()
 
     init_queues()
-    logger.info("Bot started. Bot enabled: %s", settings.BOT_ENABLED)
+    logger.info("Bot started (%s). Bot enabled: %s", settings.API_SERVER, settings.BOT_ENABLED)
 
 
 async def main():
-    bot = Bot(
-        token=settings.BOT_TOKEN,
-        default=DefaultBotProperties(parse_mode=None),
-    )
+    if settings.API_SERVER == "bale":
+        bale_api = TelegramAPIServer(
+            base="https://tapi.bale.ai/bot{token}/{method}",
+            file="https://tapi.bale.ai/file/bot{token}/{path}",
+        )
+        bot = Bot(
+            token=settings.BOT_TOKEN,
+            default=DefaultBotProperties(parse_mode=None),
+            session=AiohttpSession(api=bale_api),
+        )
+    else:
+        bot = Bot(
+            token=settings.BOT_TOKEN,
+            default=DefaultBotProperties(parse_mode=None),
+        )
 
     dp = Dispatcher()
 
@@ -69,13 +82,19 @@ async def main():
     dp.callback_query.middleware(ForceJoinCallbackMiddleware())
     dp.callback_query.middleware(DBSessionMiddleware())
 
+    dp.pre_checkout_query.middleware(DBSessionMiddleware())
+
     dp.include_router(start.router)
     dp.include_router(admin.router)
-    dp.include_router(settings_handler.router)
     dp.include_router(premium.router)
     dp.include_router(balance.router)
+    dp.include_router(settings_handler.router)
     dp.include_router(generate.router)
     dp.include_router(edit.router)
+
+    if settings.API_SERVER == "bale":
+        from bot.handlers import bale_payment
+        dp.include_router(bale_payment.router)
 
     scheduler = AsyncIOScheduler(timezone=IRAN_TZ)
     scheduler.add_job(reset_daily_quotas, CronTrigger(hour=0, minute=0, timezone=IRAN_TZ))

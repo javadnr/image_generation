@@ -9,6 +9,7 @@ from bot.keyboards.inline import admin_status
 from bot.db.engine import async_session
 from sqlalchemy import select, update
 from bot.db.models import BotSettings
+from bot.texts import badge
 import bot.texts as texts
 
 router = Router()
@@ -38,18 +39,20 @@ async def bot_status(message: Message, session):
 
     status_text = "فعال" if bot_enabled else "غیرفعال"
 
-    text = texts.ADMIN_STATS.format(
-        status=status_text,
-        total_users=total_users,
-        active_today=active_today,
-        joined_today=joined_today,
-        free_images=free_images,
-        bronze_images=bronze_images,
-        silver_images=silver_images,
-        gold_images=gold_images,
-        bronze_users=bronze_users,
-        silver_users=silver_users,
-        gold_users=gold_users,
+    text = badge(
+        texts.ADMIN_STATS.format(
+            status=status_text,
+            total_users=total_users,
+            active_today=active_today,
+            joined_today=joined_today,
+            free_images=free_images,
+            bronze_images=bronze_images,
+            silver_images=silver_images,
+            gold_images=gold_images,
+            bronze_users=bronze_users,
+            silver_users=silver_users,
+            gold_users=gold_users,
+        )
     )
 
     await message.answer(text, reply_markup=admin_status(bot_enabled))
@@ -76,7 +79,7 @@ async def toggle_bot(callback: CallbackQuery, session):
     toggle_text = texts.ADMIN_TOGGLE_ON if settings_row.bot_enabled else texts.ADMIN_TOGGLE_OFF
 
     await callback.message.edit_text(
-        f"📊 وضعیت ربات\n\n🟢 وضعیت: {new_status}",
+        badge(f"📊 وضعیت ربات\n\n🟢 وضعیت: {new_status}"),
         reply_markup=admin_status(settings_row.bot_enabled),
     )
     await callback.answer(toggle_text)
@@ -99,28 +102,28 @@ async def set_premium_cmd(message: Message, session):
 
     parts = message.text.split()
     if len(parts) != 3:
-        await message.answer(texts.ADMIN_USAGE)
+        await message.answer(badge(texts.ADMIN_USAGE))
         return
 
     try:
         user_id = int(parts[1])
     except ValueError:
-        await message.answer(texts.ADMIN_USAGE)
+        await message.answer(badge(texts.ADMIN_USAGE))
         return
 
     tier = parts[2].lower()
     if tier not in ("free", "bronze", "silver", "gold"):
-        await message.answer(texts.ADMIN_INVALID_TIER)
+        await message.answer(badge(texts.ADMIN_INVALID_TIER))
         return
 
     user = await set_tier(session, user_id, tier)
     if user:
-        await message.answer(texts.ADMIN_ACTIVATED.format(tier=tier, user_id=user_id))
+        await message.answer(badge(texts.ADMIN_ACTIVATED.format(tier=tier, user_id=user_id)))
         from bot.services.report import send_premium_report
         if tier != "free":
             await send_premium_report(message.bot, user_id, tier)
     else:
-        await message.answer(f"⚠️ کاربر با ID {user_id} یافت نشد.")
+        await message.answer(badge(f"⚠️ کاربر با ID {user_id} یافت نشد."))
 
 
 @router.message(F.text.startswith("/stats"))
@@ -132,8 +135,10 @@ async def stats_cmd(message: Message, session):
     active = await get_active_today_count(session)
     joined = await get_joined_today_count(session)
     await message.answer(
-        f"📊 آمار کلی\n\n"
-        f"👥 کل: {total}\n"
-        f"🟢 فعال امروز: {active}\n"
-        f"🆕 جدید امروز: {joined}"
+        badge(
+            f"📊 آمار کلی\n\n"
+            f"👥 کل: {total}\n"
+            f"🟢 فعال امروز: {active}\n"
+            f"🆕 جدید امروز: {joined}"
+        )
     )

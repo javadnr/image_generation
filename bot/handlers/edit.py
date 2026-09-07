@@ -1,10 +1,12 @@
 import os
+import logging
 from aiogram import Router, F
-from aiogram.types import Message
+from aiogram.types import Message, BufferedInputFile
 from bot.services.user import get_or_create_user, check_and_reset_daily, can_generate, consume_quota, set_generating, get_image_by_message, save_image
 from bot.services.queue import acquire_queue, release_queue
 from bot.services.image import edit_image
 from bot.keyboards.reply import main_menu
+from bot.texts import badge
 import bot.texts as texts
 
 router = Router()
@@ -22,44 +24,47 @@ async def handle_edit(message: Message, session):
         return
 
     if reply_msg.from_user.id != message.bot.id:
-        await message.answer(texts.EDIT_NOT_OWN)
+        await message.answer(badge(texts.EDIT_NOT_OWN))
         return
 
     img = await get_image_by_message(session, user, reply_msg.message_id)
     if not img:
-        await message.answer(texts.EDIT_NOT_SAVED)
+        await message.answer(badge(texts.EDIT_NOT_SAVED))
         return
 
     if not os.path.exists(img.file_path):
-        await message.answer(texts.EDIT_FILE_MISSING)
+        await message.answer(badge(texts.EDIT_FILE_MISSING))
         return
 
     if not await can_generate(session, user):
-        await message.answer(texts.QUOTA_EXCEEDED)
+        await message.answer(badge(texts.QUOTA_EXCEEDED))
         return
 
     if user.is_generating:
-        await message.answer("⏳ لطفاً صبر کنید. تصویر قبلی در حال ساخت است.")
+        await message.answer(badge("⏳ لطفاً صبر کنید. تصویر قبلی در حال ساخت است."))
         return
 
     if not await acquire_queue(user.tier, user.telegram_id):
-        await message.answer("⏳ صف پر است. لطفاً صبر کنید...")
+        await message.answer(badge("⏳ صف پر است. لطفاً صبر کنید..."))
         return
 
     try:
         await set_generating(session, user, True)
-        await message.answer(texts.GENERATING)
+        gen_msg = await message.answer(badge("درحال ساخت...."))
 
         width = user.image_width if user.tier != "free" else 1024
         height = user.image_height if user.tier != "free" else 1024
 
         image_bytes = await edit_image(img.file_path, message.text, user.tier, width, height)
 
+        await gen_msg.delete()
+
         user_dir = os.path.join(IMAGES_DIR, str(user.telegram_id))
         os.makedirs(user_dir, exist_ok=True)
 
+        photo = BufferedInputFile(image_bytes, filename="image.png")
         sent_msg = await message.answer_photo(
-            photo=image_bytes,
+            photo=photo,
             caption=f"✅ {message.text[:100]}",
         )
 
@@ -71,13 +76,18 @@ async def handle_edit(message: Message, session):
         await save_image(session, user, sent_msg.message_id, file_path, message.text)
 
     except Exception as e:
+        logging.error("Image edit failed: %s", e, exc_info=True)
         error_text = str(e)
         if "rate" in error_text.lower():
-            await message.answer(texts.ERROR_WAIT)
+            error_msg = texts.ERROR_WAIT
         elif "moderation" in error_text.lower():
-            await message.answer(texts.ERROR_MODERATION)
+            error_msg = texts.ERROR_MODERATION
         else:
-            await message.answer(texts.ERROR_GENERIC)
+            error_msg = f"⚠️ خطا: {error_text[:200]}"
+        try:
+            await gen_msg.edit_text(badge(error_msg))
+        except Exception:
+            await message.answer(badge(error_msg))
     finally:
         await set_generating(session, user, False)
         release_queue(user.tier, user.telegram_id)

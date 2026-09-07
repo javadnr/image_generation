@@ -19,9 +19,11 @@ class User(Base):
     image_width = Column(Integer, default=1024)
     image_height = Column(Integer, default=1024)
     optimize_prompt = Column(Boolean, default=False)
+    premium_expire_date = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     images = relationship("GeneratedImage", back_populates="user", cascade="all, delete-orphan")
+    transactions = relationship("Transaction", back_populates="user", cascade="all, delete-orphan")
 
 
 class GeneratedImage(Base):
@@ -35,6 +37,22 @@ class GeneratedImage(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="images")
+
+
+class Transaction(Base):
+    __tablename__ = "transactions"
+
+    id = Column(String(36), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    plan = Column(String(20), nullable=False)
+    amount = Column(Integer, nullable=False)
+    status = Column(String(20), default="pending")
+    payment_authority = Column(String(255), nullable=True)
+    payment_ref_id = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    paid_at = Column(DateTime, nullable=True)
+
+    user = relationship("User", back_populates="transactions")
 
 
 class BotSettings(Base):

@@ -1,9 +1,19 @@
-WELCOME = "سلام! 👋\nبه ربات تولید تصویر خوش آمدید.\n\nیک پرامپت ارسال کنید تا تصویر برایتان ساخته شود."
+from bot.config import settings
 
-MAIN_MENU_GENERATE = "🎨 تولید تصویر"
+
+def badge(text: str) -> str:
+    return f"{text}\n\n{settings.BADGE}"
+
+
+WELCOME = "🎨 به ربات تولید تصویر با هوش مصنوعی خوش اومدی!\n\nاینجا فقط کافیه چیزی که می‌خوای رو توصیف کنی؛ ربات با هوش مصنوعی برات به تصویر تبدیلش می‌کنه ✨\n\n🖼️ ساخت تصاویر خلاقانه و حرفه‌ای\n🤖 استفاده از مدل‌های پیشرفته OpenAI\n⚡️ تولید سریع و باکیفیت\n\n👇 برای شروع، ایده‌ات رو همینجا بنویس.\nمثلاً:\n«یک گربه فضانورد روی مریخ، سبک سینمایی و واقع‌گرایانه»"
+
+MAIN_MENU_GENERATE = "🎨 ساخت تصویر"
 MAIN_MENU_BALANCE = "📊 موجودی"
-MAIN_MENU_PREMIUM = "💎 پریمیوم"
+MAIN_MENU_PREMIUM = "💎 خرید اشتراک"
+MAIN_MENU_SETTINGS = "⚙️ تنظیمات"
 MAIN_MENU_ADMIN = "📊 وضعیت ربات"
+
+TIER_NAMES_FA = {"bronze": "برنزی", "silver": "نقره‌ای", "gold": "طلایی"}
 
 GENERATING = "⏳ در حال تGENERATING..."
 GENERATION_SUCCESS = "✅ تصویر با موفقیت ساخته شد!"
@@ -28,7 +38,8 @@ SETTINGS_BACK = "🔙 بازگشت"
 
 RESOLUTION_TITLE = "🖼 رزولوشن تصویر را انتخاب کنید:"
 RESOLUTION_CUSTOM = "🔄 رزولوشن سفارشی"
-RESOLUTION_CUSTOM_PROMPT = "رزولوشن دلخواه را به صورت عرض×ارتفاع ارسال کنید.\nمثال: 768×512"
+RESOLUTION_CUSTOM_PROMPT = "رزولوشن دلخواه را به صورت عرض×ارتفاع ارسال کنید.\nمثال: 768×512\n\nیا روی لغو بزنید:"
+RESOLUTION_CANCEL = "❌ لغو"
 RESOLUTION_INVALID = "⚠️ رزولوشن نامعتبر.\nمقادیر باید مضربی از ۶۴ و نسبت بزرگتر به کوچکتر حداکثر ۱۶:۹ باشند.\nمثال صحیح: 768×512"
 RESOLUTION_SET = "✅ رزولوشن به {width}×{height} تغییر کرد."
 

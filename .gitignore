@@ -1,4 +1,5 @@
 .env
+.env.bale
 __pycache__/
 *.pyc
 *.pyo
@@ -9,3 +10,4 @@ venv/
 *.egg-info/
 dist/
 build/
+pgdata/

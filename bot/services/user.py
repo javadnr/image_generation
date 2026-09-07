@@ -2,13 +2,16 @@ from datetime import date
 from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from bot.db.models import User, GeneratedImage
+from bot.config import settings
 
-TIER_LIMITS = {
-    "free": 2,
-    "bronze": 10,
-    "silver": 25,
-    "gold": 50,
-}
+
+def get_tier_limit(tier: str) -> int:
+    return {
+        "free": settings.FREE_LIMIT,
+        "bronze": settings.BRONZE_LIMIT,
+        "silver": settings.SILVER_LIMIT,
+        "gold": settings.GOLD_LIMIT,
+    }.get(tier, settings.FREE_LIMIT)
 
 
 async def get_or_create_user(session: AsyncSession, telegram_id: int) -> User:
@@ -34,7 +37,7 @@ async def check_and_reset_daily(session: AsyncSession, user: User) -> User:
 
 async def can_generate(session: AsyncSession, user: User) -> bool:
     user = await check_and_reset_daily(session, user)
-    limit = TIER_LIMITS.get(user.tier, 2)
+    limit = get_tier_limit(user.tier)
     return user.daily_used < limit
 
 
@@ -45,7 +48,7 @@ async def consume_quota(session: AsyncSession, user: User) -> None:
 
 async def get_remaining(session: AsyncSession, user: User) -> int:
     user = await check_and_reset_daily(session, user)
-    limit = TIER_LIMITS.get(user.tier, 2)
+    limit = get_tier_limit(user.tier)
     return max(0, limit - user.daily_used)
 
 

@@ -1,6 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from bot.config import settings
-from bot.services.user import TIER_LIMITS
+from bot.services.user import get_tier_limit
+from bot.services.report import TIER_PRICES
 import bot.texts as texts
 
 
@@ -22,11 +23,12 @@ def force_join() -> InlineKeyboardMarkup:
 def premium_menu(user) -> InlineKeyboardMarkup:
     buttons = []
     if user.tier == "free":
-        buttons.append([InlineKeyboardButton(text="🥉 برنزی", callback_data="buy_bronze")])
-        buttons.append([InlineKeyboardButton(text="🥈 نقره‌ای", callback_data="buy_silver")])
-        buttons.append([InlineKeyboardButton(text="🥇 طلایی", callback_data="buy_gold")])
-    else:
-        buttons.append([InlineKeyboardButton(text=texts.PREMIUM_SETTINGS, callback_data="settings")])
+        for tier, emoji in [("bronze", "🥉"), ("silver", "🥈"), ("gold", "🥇")]:
+            price = TIER_PRICES.get(tier, 0)
+            buttons.append([InlineKeyboardButton(
+                text=f"{emoji} {texts.TIER_NAMES_FA[tier]} — {price // 1000} هزار تومان",
+                callback_data=f"buy_{tier}",
+            )])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -37,7 +39,6 @@ def settings_menu(user) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=current, callback_data="resolution_picker")],
         [InlineKeyboardButton(text=optimize_text, callback_data="toggle_optimize")],
-        [InlineKeyboardButton(text=texts.SETTINGS_BACK, callback_data="back_premium")],
     ])
 
 

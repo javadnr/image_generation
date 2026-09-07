@@ -7,6 +7,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U bot -d imagebot"]
       interval: 5s
@@ -19,7 +20,25 @@ services:
       postgres:
         condition: service_healthy
     env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://bot:${DB_PASSWORD:-changeme}@postgres:5432/imagebot
+      API_SERVER: telegram
     volumes:
+      - ./bot:/app/bot
+      - ./images:/app/images
+    restart: unless-stopped
+
+  bale-bot:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: .env.bale
+    environment:
+      DATABASE_URL: postgresql+asyncpg://bot:${DB_PASSWORD:-changeme}@postgres:5432/imagebot_bale
+      API_SERVER: bale
+    volumes:
+      - ./bot:/app/bot
       - ./images:/app/images
     restart: unless-stopped
 

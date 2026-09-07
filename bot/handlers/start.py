@@ -1,8 +1,11 @@
 from aiogram import Router, F
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from bot.services.user import get_or_create_user, check_and_reset_daily
 from bot.keyboards.reply import main_menu
 from bot.keyboards.inline import force_join
+from bot.handlers.settings import ResolutionState
+from bot.texts import badge
 import bot.texts as texts
 from bot.config import settings
 
@@ -10,7 +13,9 @@ router = Router()
 
 
 @router.message(F.text == "/start")
-async def cmd_start(message: Message, session):
+async def cmd_start(message: Message, session, state: FSMContext):
+    if await state.get_state() == ResolutionState.waiting:
+        return
     user = await get_or_create_user(session, message.from_user.id)
     await check_and_reset_daily(session, user)
 
@@ -20,12 +25,12 @@ async def cmd_start(message: Message, session):
             try:
                 member = await bot.get_chat_member(chat_id=channel_id, user_id=message.from_user.id)
                 if member.status in ("left", "kicked"):
-                    await message.answer(texts.FORCE_JOIN_TITLE, reply_markup=force_join())
+                    await message.answer(badge(texts.FORCE_JOIN_TITLE), reply_markup=force_join())
                     return
             except Exception:
                 continue
 
-    await message.answer(texts.WELCOME, reply_markup=main_menu(message.from_user.id))
+    await message.answer(badge(texts.WELCOME), reply_markup=main_menu(user))
 
 
 @router.callback_query(F.data == "verify_join")
@@ -45,8 +50,8 @@ async def verify_join(callback: CallbackQuery, session):
 
     if all_joined:
         await callback.message.edit_text(
-            texts.WELCOME,
-            reply_markup=main_menu(callback.from_user.id),
+            badge(texts.WELCOME),
+            reply_markup=main_menu(user),
         )
     else:
         await callback.answer(texts.FORCE_JOIN_NOT_JOINED, show_alert=True)
