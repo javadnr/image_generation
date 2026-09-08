@@ -119,13 +119,4 @@ async def handle_custom_resolution(message: Message, session, state: FSMContext)
 
 @router.callback_query(F.data == "toggle_optimize")
 async def toggle_optimize_handler(callback: CallbackQuery, session):
-    user = await get_or_create_user(session, callback.from_user.id)
-    await toggle_optimize(session, user)
-    optimize_status = texts.SETTINGS_OPTIMIZE_ON if user.optimize_prompt else texts.SETTINGS_OPTIMIZE_OFF
-    text = badge(
-        f"{texts.SETTINGS_TITLE}\n\n"
-        f"{texts.SETTINGS_RESOLUTION.format(width=user.image_width, height=user.image_height)}\n"
-        f"{texts.SETTINGS_OPTIMIZE.format(status=optimize_status)}"
-    )
-    await callback.message.edit_text(text, reply_markup=settings_menu(user))
-    await callback.answer()
+    await callback.answer("⚠️ این قابلیت در آینده اضافه خواهد شد.", show_alert=True)
