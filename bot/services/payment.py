@@ -132,18 +132,10 @@ async def verify_zarinpal_payment(session: AsyncSession, tx_id: str) -> dict:
 
 
 async def create_bale_purchase(session: AsyncSession, user: User, plan: str) -> dict:
-    existing = await _find_pending_tx(session, user.id, plan)
+    existing, _ = await _find_pending_tx(session, user.id, plan)
     if existing:
-        amount = existing.amount
-        plan_display = {"bronze": "🥉 برنزی", "silver": "🥈 نقره‌ای", "gold": "🥇 طلایی"}
-        return {
-            "transaction_id": existing.id,
-            "title": f"اشتراک {plan_display.get(plan, plan)}",
-            "description": f"خرید اشتراک {plan} - تصویرساز هوش مصنوعی",
-            "payload": existing.id,
-            "prices": [{"label": plan_display.get(plan, plan), "amount": amount * 10}],
-            "amount_toman": amount,
-        }
+        await session.delete(existing)
+        await session.commit()
 
     amount = PLAN_PRICES[plan]
     tx = Transaction(
