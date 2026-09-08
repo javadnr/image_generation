@@ -34,7 +34,10 @@ def get_bale_payment_provider() -> BalePaymentProvider | None:
     return BalePaymentProvider(settings.BOT_TOKEN, settings.BALE_PROVIDER_TOKEN)
 
 
-async def _find_pending_tx(session: AsyncSession, user_id: int, plan: str) -> Transaction | None:
+LINK_EXPIRY_MINUTES = 30
+
+
+async def _find_pending_tx(session: AsyncSession, user_id: int, plan: str):
     result = await session.execute(
         select(Transaction).where(
             Transaction.user_id == user_id,
@@ -43,9 +46,12 @@ async def _find_pending_tx(session: AsyncSession, user_id: int, plan: str) -> Tr
         ).order_by(Transaction.created_at.desc())
     )
     tx = result.scalar_one_or_none()
-    if tx and (datetime.utcnow() - tx.created_at).total_seconds() < 1800:
-        return tx
-    return None
+    if tx:
+        age = (datetime.utcnow() - tx.created_at).total_seconds()
+        if age < LINK_EXPIRY_MINUTES * 60:
+            remaining = LINK_EXPIRY_MINUTES - int(age // 60)
+            return tx, remaining
+    return None, 0
 
 
 async def activate_plan(session: AsyncSession, user: User, plan: str) -> None:
@@ -56,19 +62,18 @@ async def activate_plan(session: AsyncSession, user: User, plan: str) -> None:
 
 
 async def create_zarinpal_purchase(session: AsyncSession, user: User, plan: str) -> dict:
-    existing = await _find_pending_tx(session, user.id, plan)
-    if existing:
-        authority = existing.payment_authority
-        amount = existing.amount
-        client = get_zarinpal_client()
-        _, payment_link = await client.request_payment(amount, f"اشتراک {plan}")
-        existing.payment_authority = authority
-        await session.commit()
+    existing, remaining = await _find_pending_tx(session, user.id, plan)
+    if existing and existing.payment_authority:
+        payment_link = f"https://www.zarinpal.com/pg/StartPay/{existing.payment_authority}"
         return {
             "transaction_id": existing.id,
             "payment_link": payment_link,
-            "amount_toman": amount,
+            "amount_toman": existing.amount,
+            "remaining_minutes": remaining,
         }
+    if existing:
+        await session.delete(existing)
+        await session.commit()
 
     amount = PLAN_PRICES[plan]
     client = get_zarinpal_client()
@@ -89,6 +94,7 @@ async def create_zarinpal_purchase(session: AsyncSession, user: User, plan: str)
         "transaction_id": tx.id,
         "payment_link": payment_link,
         "amount_toman": amount,
+        "remaining_minutes": LINK_EXPIRY_MINUTES,
     }
 
 

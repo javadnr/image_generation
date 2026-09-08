@@ -108,6 +108,7 @@ async def buy_tier(callback: CallbackQuery, session):
             tx_id = result["transaction_id"]
             payment_link = result["payment_link"]
             amount = result["amount_toman"]
+            remaining = result["remaining_minutes"]
 
             keyboard = InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text=f"💳 پرداخت {amount:,} تومان", url=payment_link)],
@@ -118,7 +119,8 @@ async def buy_tier(callback: CallbackQuery, session):
                 f"📋 پلن انتخابی: {texts.TIER_NAMES_FA[tier]}\n"
                 f"💰 مبلغ: {amount:,} تومان\n"
                 f"📅 مدت: {settings.PREMIUM_DURATION_DAYS} روز\n\n"
-                f"💡 روی دکمه پرداخت کلیک کنید و پس از تکمیل، دکمه «پرداخت را انجام دادم» را بزنید."
+                f"💡 روی دکمه پرداخت کلیک کنید و پس از تکمیل، دکمه «پرداخت را انجام دادم» را بزنید.\n"
+                f"⏳ لینک پرداخت به مدت {remaining} دقیقه معتبر است."
             )
             await callback.message.answer(badge(text), reply_markup=keyboard)
     except Exception as e:
