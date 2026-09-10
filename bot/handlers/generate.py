@@ -3,7 +3,7 @@ import logging
 from aiogram import Router, F
 from aiogram.types import Message, BufferedInputFile
 from bot.config import settings
-from bot.services.user import get_or_create_user, check_and_reset_daily, can_generate, consume_quota, set_generating, save_image, get_tier_limit, get_remaining
+from bot.services.user import get_or_create_user, check_and_reset_daily, can_generate, consume_quota, set_generating, save_image, get_tier_limit, get_remaining, check_max_limit
 from bot.services.queue import acquire_queue, release_queue
 from bot.services.image import generate_image
 from bot.keyboards.reply import main_menu
@@ -46,6 +46,10 @@ async def handle_generate(message: Message, session):
 
     user = await get_or_create_user(session, message.from_user.id)
     user = await check_and_reset_daily(session, user)
+
+    if await check_max_limit(session, user):
+        await message.answer(badge(texts.QUOTA_EXCEEDED_MAX))
+        return
 
     if user.is_generating:
         await message.answer(badge("⏳ لطفاً صبر کنید. تصویر قبلی در حال ساخت است."))

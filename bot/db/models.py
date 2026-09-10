@@ -14,6 +14,7 @@ class User(Base):
     telegram_id = Column(BigInteger, unique=True, nullable=False)
     tier = Column(String(20), default="free")
     daily_used = Column(Integer, default=0)
+    total_used = Column(Integer, default=0)
     last_reset_date = Column(Date, default=date.today)
     is_generating = Column(Boolean, default=False)
     image_width = Column(Integer, default=1024)

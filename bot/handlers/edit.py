@@ -4,7 +4,7 @@ import tempfile
 from aiogram import Router, F
 from aiogram.types import Message, BufferedInputFile
 from bot.config import settings
-from bot.services.user import get_or_create_user, check_and_reset_daily, can_generate, consume_quota, set_generating, get_image_by_message, save_image
+from bot.services.user import get_or_create_user, check_and_reset_daily, can_generate, consume_quota, set_generating, get_image_by_message, save_image, check_max_limit
 from bot.services.queue import acquire_queue, release_queue
 from bot.services.image import edit_image
 from bot.keyboards.reply import main_menu
@@ -20,6 +20,10 @@ IMAGES_DIR = "images"
 async def handle_edit(message: Message, session):
     user = await get_or_create_user(session, message.from_user.id)
     user = await check_and_reset_daily(session, user)
+
+    if await check_max_limit(session, user):
+        await message.answer(badge(texts.QUOTA_EXCEEDED_MAX))
+        return
 
     reply_msg = message.reply_to_message
     if not reply_msg.photo:
@@ -110,6 +114,10 @@ async def handle_edit(message: Message, session):
 async def handle_photo_edit(message: Message, session, bot):
     user = await get_or_create_user(session, message.from_user.id)
     user = await check_and_reset_daily(session, user)
+
+    if await check_max_limit(session, user):
+        await message.answer(badge(texts.QUOTA_EXCEEDED_MAX))
+        return
 
     prompt = message.caption
     if not prompt or not prompt.strip():

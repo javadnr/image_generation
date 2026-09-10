@@ -5,6 +5,11 @@ from bot.services.report import TIER_PRICES
 import bot.texts as texts
 
 
+def to_persian_digits(n: int) -> str:
+    persian = "۰۱۲۳۴۵۶۷۸۹"
+    return "".join(persian[int(d)] for d in str(n))
+
+
 def force_join() -> InlineKeyboardMarkup:
     buttons = []
     for channel_link in settings.REQUIRED_CHANNELS.values():
@@ -23,10 +28,12 @@ def force_join() -> InlineKeyboardMarkup:
 def premium_menu(user) -> InlineKeyboardMarkup:
     buttons = []
     if user.tier == "free":
+        tier_tags = {"bronze": "", "silver": "⭐ محبوب‌ترین", "gold": "🔥 بیشترین اعتبار"}
         for tier, emoji in [("bronze", "🥉"), ("silver", "🥈"), ("gold", "🥇")]:
             price = TIER_PRICES.get(tier, 0)
+            tag = tier_tags[tier]
             buttons.append([InlineKeyboardButton(
-                text=f"{emoji} {texts.TIER_NAMES_FA[tier]} — {price // 1000} هزار تومان",
+                text=f"{emoji} {texts.TIER_NAMES_FA[tier]} — {to_persian_digits(price // 1000)} هزار تومان {tag}",
                 callback_data=f"buy_{tier}",
             )])
     return InlineKeyboardMarkup(inline_keyboard=buttons)

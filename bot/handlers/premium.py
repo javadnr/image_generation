@@ -1,11 +1,12 @@
 from datetime import datetime
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-from bot.services.user import get_or_create_user, get_tier_limit
+from bot.services.user import get_or_create_user, get_tier_limit, get_tier_max_limit
 from bot.services.report import send_premium_report, TIER_PRICES
 from bot.services.payment import (
     create_zarinpal_purchase, verify_zarinpal_payment,
     create_bale_purchase, get_bale_payment_provider,
+    PLAN_LIMITS, PLAN_MAX_LIMITS,
 )
 from bot.keyboards.inline import premium_menu
 from bot.keyboards.reply import main_menu
@@ -29,11 +30,12 @@ def premium_text(user) -> str:
         expire = user.premium_expire_date.strftime("%Y/%m/%d")
         remaining = (user.premium_expire_date.date() - datetime.now().date()).days
         daily = get_tier_limit(user.tier)
-        monthly = daily * 30
+        max_limit = get_tier_max_limit(user.tier)
+        total_remaining = max_limit - user.total_used if max_limit else "∞"
         return badge(
             f"{texts.PREMIUM_TITLE}\n\n"
             f"📊 سقف روزانه: {daily} تصویر\n"
-            f"📊 سقف ماهانه: {monthly} تصویر\n"
+            f"📊 سقف کل: {total_remaining} از {max_limit} تصویر\n"
             f"📅 تاریخ پایان: {expire}\n"
             f"⏳ روزهای باقی‌مانده: {remaining}"
         )
@@ -41,6 +43,10 @@ def premium_text(user) -> str:
     bronze_daily = get_tier_limit("bronze")
     silver_daily = get_tier_limit("silver")
     gold_daily = get_tier_limit("gold")
+
+    bronze_max = settings.BRONZE_MAX_LIMIT
+    silver_max = settings.SILVER_MAX_LIMIT
+    gold_max = settings.GOLD_MAX_LIMIT
 
     bronze_q = settings.BRONZE_QUEUE_SIZE or "∞"
     silver_q = settings.SILVER_QUEUE_SIZE or "∞"
@@ -51,15 +57,15 @@ def premium_text(user) -> str:
         f"با خرید پریمیوم، محدودیت تولید تصویرت رو بیشتر کن و با اولویت بالاتر عکس بساز! 🚀\n\n"
         f"🥉 برنزی — {tooman_display(settings.BRONZE_PRICE)}\n"
         f"• روزانه تا {bronze_daily} تصویر\n"
-        f"• حداکثر {bronze_daily * 30} تصویر در ماه\n"
+        f"• حداکثر {bronze_max} تصویر\n"
         f"• صف پردازش تا {bronze_q} کاربر همزمان\n\n"
-        f"🥈 نقره‌ای — {tooman_display(settings.SILVER_PRICE)}\n"
+        f"🥈 نقره‌ای — {tooman_display(settings.SILVER_PRICE)} ⭐ محبوب‌ترین\n"
         f"• روزانه تا {silver_daily} تصویر\n"
-        f"• حداکثر {silver_daily * 30} تصویر در ماه\n"
+        f"• حداکثر {silver_max} تصویر\n"
         f"• صف پردازش تا {silver_q} کاربر همزمان\n\n"
-        f"🥇 طلایی — {tooman_display(settings.GOLD_PRICE)}\n"
+        f"🥇 طلایی — {tooman_display(settings.GOLD_PRICE)} 🔥 بیشترین اعتبار\n"
         f"• روزانه تا {gold_daily} تصویر\n"
-        f"• حداکثر {gold_daily * 30} تصویر در ماه\n"
+        f"• حداکثر {gold_max} تصویر\n"
         f"• بدون صف پردازش ⚡️\n\n"
         f"🆓 پلن رایگان\n"
         f"• روزانه {get_tier_limit('free')} تصویر\n"
@@ -118,7 +124,9 @@ async def buy_tier(callback: CallbackQuery, session):
             text = (
                 f"📋 پلن انتخابی: {texts.TIER_NAMES_FA[tier]}\n"
                 f"💰 مبلغ: {amount:,} تومان\n"
-                f"📅 مدت: {settings.PREMIUM_DURATION_DAYS} روز\n\n"
+                f"📅 مدت: {settings.PREMIUM_DURATION_DAYS} روز\n"
+                f"📊 سقف روزانه: {PLAN_LIMITS[tier]} تصویر\n"
+                f"📊 سقف کل: {PLAN_MAX_LIMITS[tier]} تصویر\n\n"
                 f"💡 روی دکمه پرداخت کلیک کنید و پس از تکمیل، دکمه «پرداخت را انجام دادم» را بزنید.\n"
                 f"⏳ لینک پرداخت به مدت {remaining} دقیقه معتبر است."
             )
@@ -139,13 +147,13 @@ async def handle_check_payment(callback: CallbackQuery, session):
     if result["success"]:
         plan = result["plan"]
         daily = result["daily_limit"]
-        monthly = daily * 30
+        max_limit = result["max_limit"]
         expire = result["expires_at"]
 
         text = (
             f"✅ اشتراک {texts.TIER_NAMES_FA[plan]} فعال شد!\n\n"
             f"📊 سقف روزانه: {daily} تصویر\n"
-            f"📊 سقف ماهانه: {monthly} تصویر\n"
+            f"📊 سقف کل: {max_limit} تصویر\n"
             f"📅 پایان اشتراک: {expire}"
         )
         await callback.message.edit_text(badge(text))

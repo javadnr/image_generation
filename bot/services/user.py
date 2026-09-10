@@ -14,6 +14,16 @@ def get_tier_limit(tier: str) -> int:
     }.get(tier, settings.FREE_LIMIT)
 
 
+def get_tier_max_limit(tier: str) -> int | None:
+    if tier == "free":
+        return None
+    return {
+        "bronze": settings.BRONZE_MAX_LIMIT,
+        "silver": settings.SILVER_MAX_LIMIT,
+        "gold": settings.GOLD_MAX_LIMIT,
+    }.get(tier)
+
+
 async def get_or_create_user(session: AsyncSession, telegram_id: int) -> User:
     result = await session.execute(select(User).where(User.telegram_id == telegram_id))
     user = result.scalar_one_or_none()
@@ -35,6 +45,21 @@ async def check_and_reset_daily(session: AsyncSession, user: User) -> User:
     return user
 
 
+async def check_max_limit(session: AsyncSession, user: User) -> bool:
+    """Check if premium user hit max limit. Returns True if downgraded."""
+    if user.tier == "free":
+        return False
+    max_limit = get_tier_max_limit(user.tier)
+    if max_limit is not None and user.total_used >= max_limit:
+        user.tier = "free"
+        user.total_used = 0
+        user.daily_used = 0
+        await session.commit()
+        await session.refresh(user)
+        return True
+    return False
+
+
 async def can_generate(session: AsyncSession, user: User) -> bool:
     user = await check_and_reset_daily(session, user)
     limit = get_tier_limit(user.tier)
@@ -43,6 +68,8 @@ async def can_generate(session: AsyncSession, user: User) -> bool:
 
 async def consume_quota(session: AsyncSession, user: User) -> None:
     user.daily_used += 1
+    if user.tier != "free":
+        user.total_used += 1
     await session.commit()
 
 
@@ -50,6 +77,13 @@ async def get_remaining(session: AsyncSession, user: User) -> int:
     user = await check_and_reset_daily(session, user)
     limit = get_tier_limit(user.tier)
     return max(0, limit - user.daily_used)
+
+
+async def get_total_remaining(session: AsyncSession, user: User) -> int | None:
+    max_limit = get_tier_max_limit(user.tier)
+    if max_limit is None:
+        return None
+    return max(0, max_limit - user.total_used)
 
 
 async def set_tier(session: AsyncSession, telegram_id: int, tier: str) -> User | None:

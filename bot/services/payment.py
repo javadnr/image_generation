@@ -23,6 +23,12 @@ PLAN_LIMITS = {
     "gold": settings.GOLD_LIMIT,
 }
 
+PLAN_MAX_LIMITS = {
+    "bronze": settings.BRONZE_MAX_LIMIT,
+    "silver": settings.SILVER_MAX_LIMIT,
+    "gold": settings.GOLD_MAX_LIMIT,
+}
+
 
 def get_zarinpal_client() -> ZarinPalClient:
     return ZarinPalClient(settings.ZARINPAL_API_URL, settings.ZARINPAL_PROJECT_ID)
@@ -58,6 +64,7 @@ async def activate_plan(session: AsyncSession, user: User, plan: str) -> None:
     user.tier = plan
     user.premium_expire_date = datetime.now() + timedelta(days=settings.PREMIUM_DURATION_DAYS)
     user.daily_used = 0
+    user.total_used = 0
     await session.commit()
 
 
@@ -121,6 +128,7 @@ async def verify_zarinpal_payment(session: AsyncSession, tx_id: str) -> dict:
             "success": True,
             "plan": tx.plan,
             "daily_limit": PLAN_LIMITS.get(tx.plan, 0),
+            "max_limit": PLAN_MAX_LIMITS.get(tx.plan, 0),
             "expires_at": user.premium_expire_date.strftime("%Y/%m/%d") if user.premium_expire_date else "—",
         }
     elif code == -51:
@@ -184,5 +192,6 @@ async def complete_bale_payment(
         "success": True,
         "plan": tx.plan,
         "daily_limit": PLAN_LIMITS.get(tx.plan, 0),
+        "max_limit": PLAN_MAX_LIMITS.get(tx.plan, 0),
         "expires_at": user.premium_expire_date.strftime("%Y/%m/%d") if user.premium_expire_date else "—",
     }

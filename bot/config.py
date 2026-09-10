@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     BRONZE_LIMIT: int = 10
     SILVER_LIMIT: int = 25
     GOLD_LIMIT: int = 50
+    BRONZE_MAX_LIMIT: int = 100
+    SILVER_MAX_LIMIT: int = 300
+    GOLD_MAX_LIMIT: int = 600
     BOT_ENABLED: bool = True
     BRONZE_PRICE: int = 500000
     SILVER_PRICE: int = 800000

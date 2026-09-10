@@ -18,7 +18,9 @@ TIER_NAMES_FA = {"bronze": "برنزی", "silver": "نقره‌ای", "gold": "�
 GENERATING = "⏳ در حال تGENERATING..."
 GENERATION_SUCCESS = "✅ تصویر با موفقیت ساخته شد!"
 QUOTA_EXCEEDED = "⚠️ سقف روزانه شما تمام شده.\nبرای ادامه اشتراک پریمیوم تهیه کنید."
-QUOTA_REMAINING = "📊 موجودی شما: {remaining} از {total} تصویر در روز"
+QUOTA_EXCEEDED_MAX = "⚠️ سقف کل اشتراک شما تمام شده.\nبه پلن رایگان بازگشتید."
+QUOTA_REMAINING = "📊 موجودی شما\n\n📦 پلن: {tier}\n🖼 روزانه: {daily_remaining} از {daily_limit}\n🖼 کل: {total_remaining} از {max_limit}"
+QUOTA_REMAINING_FREE = "📊 موجودی شما\n\n📦 پلن: رایگان\n🖼 روزانه: {daily_remaining} از {daily_limit}"
 
 # Premium
 PREMIUM_TITLE = "💎 اشتراک پریمیوم"
