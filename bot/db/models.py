@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from sqlalchemy import Column, Integer, BigInteger, String, Boolean, Date, DateTime, ForeignKey, Text
+from sqlalchemy import Column, Integer, BigInteger, String, Boolean, Date, DateTime, ForeignKey, Text, Index, text
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
@@ -54,6 +54,11 @@ class Transaction(Base):
     paid_at = Column(DateTime, nullable=True)
 
     user = relationship("User", back_populates="transactions")
+
+    __table_args__ = (
+        Index("uq_pending_tx_per_user_plan", "user_id", "plan",
+              unique=True, postgresql_where=text("status = 'pending'")),
+    )
 
 
 class BotSettings(Base):

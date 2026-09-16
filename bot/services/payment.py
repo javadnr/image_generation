@@ -49,7 +49,7 @@ async def _find_pending_tx(session: AsyncSession, user_id: int, plan: str):
             Transaction.user_id == user_id,
             Transaction.plan == plan,
             Transaction.status == "pending",
-        ).order_by(Transaction.created_at.desc())
+        ).order_by(Transaction.created_at.desc()).with_for_update()
     )
     tx = result.scalar_one_or_none()
     if tx:
