@@ -111,7 +111,7 @@ async def handle_generate(message: Message, session):
         elif "moderation" in error_text.lower():
             error_msg = texts.ERROR_MODERATION
         else:
-            error_msg = f"⚠️ خطا: {error_text[:200]}"
+            error_msg = texts.ERROR_GENERIC
         try:
             await gen_msg.edit_text(badge(error_msg))
         except Exception:
