@@ -140,10 +140,16 @@ async def verify_zarinpal_payment(session: AsyncSession, tx_id: str) -> dict:
 
 
 async def create_bale_purchase(session: AsyncSession, user: User, plan: str) -> dict:
-    existing, _ = await _find_pending_tx(session, user.id, plan)
-    if existing:
-        await session.delete(existing)
-        await session.commit()
+    result = await session.execute(
+        select(Transaction).where(
+            Transaction.user_id == user.id,
+            Transaction.plan == plan,
+            Transaction.status == "pending",
+        )
+    )
+    for tx in result.scalars().all():
+        await session.delete(tx)
+    await session.commit()
 
     amount = PLAN_PRICES[plan]
     tx = Transaction(
