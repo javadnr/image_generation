@@ -140,6 +140,11 @@ async def verify_zarinpal_payment(session: AsyncSession, tx_id: str) -> dict:
             "daily_limit": PLAN_LIMITS.get(tx.plan, 0),
             "max_limit": PLAN_MAX_LIMITS.get(tx.plan, 0),
             "expires_at": user.premium_expire_date.strftime("%Y/%m/%d") if user.premium_expire_date else "—",
+            "expire_dt": user.premium_expire_date,
+            "paid_at": tx.paid_at,
+            "payment_ref_id": tx.payment_ref_id,
+            "amount": tx.amount,
+            "telegram_id": user.telegram_id,
         }
     elif code == -51:
         return {"success": False, "reason": "link_expired"}
@@ -210,4 +215,10 @@ async def complete_bale_payment(
         "daily_limit": PLAN_LIMITS.get(tx.plan, 0),
         "max_limit": PLAN_MAX_LIMITS.get(tx.plan, 0),
         "expires_at": user.premium_expire_date.strftime("%Y/%m/%d") if user.premium_expire_date else "—",
+        "expire_dt": user.premium_expire_date,
+        "paid_at": tx.paid_at,
+        "payment_ref_id": tx.payment_ref_id,
+        "payment_charge_id": payment_charge_id,
+        "amount": tx.amount,
+        "telegram_id": user.telegram_id,
     }

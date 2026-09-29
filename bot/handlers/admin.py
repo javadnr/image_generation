@@ -121,7 +121,9 @@ async def set_premium_cmd(message: Message, session):
         await message.answer(badge(texts.ADMIN_ACTIVATED.format(tier=tier, user_id=user_id)))
         from bot.services.report import send_premium_report
         if tier != "free":
-            await send_premium_report(message.bot, user_id, tier)
+            await send_premium_report(
+                message.bot, user_id, tier, expire_dt=user.premium_expire_date
+            )
     else:
         await message.answer(badge(f"⚠️ کاربر با ID {user_id} یافت نشد."))
 

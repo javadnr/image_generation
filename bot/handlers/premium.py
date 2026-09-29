@@ -168,7 +168,16 @@ async def handle_check_payment(callback: CallbackQuery, session):
             reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
         )
 
-        await send_premium_report(callback.bot, callback.from_user.id, plan)
+        await send_premium_report(
+            callback.bot,
+            callback.from_user.id,
+            plan,
+            username=callback.from_user.username,
+            payment_id=result.get("payment_ref_id"),
+            amount=result.get("amount"),
+            expire_dt=result.get("expire_dt"),
+            paid_at=result.get("paid_at"),
+        )
         await callback.answer()
     elif result.get("reason") == "link_expired":
         await callback.answer("⚠️ لینک پرداخت منقضی شده است. لطفاً دوباره خرید کنید.", show_alert=True)

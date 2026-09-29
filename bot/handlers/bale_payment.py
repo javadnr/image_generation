@@ -86,7 +86,16 @@ async def handle_successful_payment(message: Message, **kwargs) -> None:
         )
         await message.answer(badge(text), reply_markup=main_menu(user))
 
-        await send_premium_report(message.bot, message.from_user.id, plan)
+        await send_premium_report(
+            message.bot,
+            message.from_user.id,
+            plan,
+            username=message.from_user.username,
+            payment_id=result.get("payment_charge_id") or result.get("payment_ref_id"),
+            amount=result.get("amount"),
+            expire_dt=result.get("expire_dt"),
+            paid_at=result.get("paid_at"),
+        )
         logger.info("Bale payment completed user=%d plan=%s", message.from_user.id, plan)
     else:
         await message.answer(badge("❌ پرداخت تأیید نشد. لطفاً با پشتیبانی تماس بگیرید."))
