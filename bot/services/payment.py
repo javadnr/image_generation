@@ -78,9 +78,19 @@ async def create_zarinpal_purchase(session: AsyncSession, user: User, plan: str)
             "amount_toman": existing.amount,
             "remaining_minutes": remaining,
         }
-    if existing:
-        await session.delete(existing)
-        await session.commit()
+
+    # No valid link: delete ALL pending txs for this user+plan
+    # (including expired ones _find_pending_tx doesn't return)
+    result = await session.execute(
+        select(Transaction).where(
+            Transaction.user_id == user.id,
+            Transaction.plan == plan,
+            Transaction.status == "pending",
+        )
+    )
+    for tx in result.scalars().all():
+        await session.delete(tx)
+    await session.commit()
 
     amount = PLAN_PRICES[plan]
     client = get_zarinpal_client()
