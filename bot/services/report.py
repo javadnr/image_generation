@@ -1,8 +1,11 @@
+import logging
 from datetime import datetime
 
 import jdatetime
 from aiogram import Bot
 from bot.config import settings
+
+logger = logging.getLogger(__name__)
 
 TIER_PRICES = {
     "bronze": settings.BRONZE_PRICE,
@@ -36,16 +39,19 @@ async def send_premium_report(
     if amount is None:
         amount = TIER_PRICES.get(tier, 0)
     username_display = f"@{username}" if username else "—"
-    await bot.send_message(
-        channel_id,
-        "💰 گزارش خرید جدید\n"
-        "─────────────────\n"
-        f"👤 شناسه کاربر: {user_id}\n"
-        f"📛 نام کاربری: {username_display}\n"
-        f"📋 پلن خریداری شده: {tier}\n"
-        f"🔢 شناسه پرداخت: {payment_id or '—'}\n"
-        f"💵 مبلغ: {amount:,} Toman\n"
-        "✅ وضعیت: completed\n"
-        f"📅 تاریخ انقضا: {format_jalali(expire_dt)}\n"
-        f"⏰ زمان تأیید: {format_jalali(paid_at)}",
-    )
+    try:
+        await bot.send_message(
+            channel_id,
+            "💰 گزارش خرید جدید\n"
+            "─────────────────\n"
+            f"👤 شناسه کاربر: {user_id}\n"
+            f"📛 نام کاربری: {username_display}\n"
+            f"📋 پلن خریداری شده: {tier}\n"
+            f"🔢 شناسه پرداخت: {payment_id or '—'}\n"
+            f"💵 مبلغ: {amount:,} Toman\n"
+            "✅ وضعیت: completed\n"
+            f"📅 تاریخ انقضا: {format_jalali(expire_dt)}\n"
+            f"⏰ زمان تأیید: {format_jalali(paid_at)}",
+        )
+    except Exception:
+        logger.exception("Failed to send premium report user=%d plan=%s", user_id, tier)
