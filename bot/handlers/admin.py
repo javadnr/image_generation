@@ -4,6 +4,8 @@ from bot.config import settings
 from bot.services.user import (
     get_all_users_count, get_active_today_count, get_joined_today_count,
     get_tier_users_count, get_tier_images_today, reset_all_daily, set_tier,
+    get_new_users_attempted_today, get_new_users_succeeded_today,
+    get_premium_clickers_today,
 )
 from bot.keyboards.inline import admin_status
 from bot.db.engine import async_session
@@ -37,6 +39,10 @@ async def bot_status(message: Message, session):
     silver_users = await get_tier_users_count(session, "silver")
     gold_users = await get_tier_users_count(session, "gold")
 
+    new_attempted = await get_new_users_attempted_today(session)
+    new_succeeded = await get_new_users_succeeded_today(session)
+    premium_clickers = await get_premium_clickers_today(session)
+
     status_text = "فعال" if bot_enabled else "غیرفعال"
 
     text = badge(
@@ -45,6 +51,9 @@ async def bot_status(message: Message, session):
             total_users=total_users,
             active_today=active_today,
             joined_today=joined_today,
+            new_attempted=new_attempted,
+            new_succeeded=new_succeeded,
+            premium_clickers=premium_clickers,
             free_images=free_images,
             bronze_images=bronze_images,
             silver_images=silver_images,

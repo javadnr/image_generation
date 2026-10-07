@@ -1,7 +1,7 @@
 from datetime import datetime
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-from bot.services.user import get_or_create_user, get_tier_limit, get_tier_max_limit
+from bot.services.user import get_or_create_user, get_tier_limit, get_tier_max_limit, log_event, EVENT_PREMIUM_CLICK
 from bot.services.report import send_premium_report, TIER_PRICES
 from bot.services.payment import (
     create_zarinpal_purchase, verify_zarinpal_payment,
@@ -78,6 +78,7 @@ def premium_text(user) -> str:
 @router.message(F.text == texts.MAIN_MENU_PREMIUM)
 async def premium(message: Message, session):
     user = await get_or_create_user(session, message.from_user.id)
+    await log_event(session, user, EVENT_PREMIUM_CLICK)
     await message.answer(premium_text(user), reply_markup=premium_menu(user))
 
 

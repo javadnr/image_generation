@@ -3,7 +3,7 @@ import logging
 from aiogram import Router, F
 from aiogram.types import Message, BufferedInputFile
 from bot.config import settings
-from bot.services.user import get_or_create_user, check_and_reset_daily, can_generate, consume_quota, set_generating, save_image, get_tier_limit, get_remaining, check_max_limit
+from bot.services.user import get_or_create_user, check_and_reset_daily, can_generate, consume_quota, set_generating, save_image, get_tier_limit, get_remaining, check_max_limit, log_event, EVENT_GENERATE_ATTEMPT
 from bot.services.queue import acquire_queue, release_queue
 from bot.services.image import generate_image
 from bot.keyboards.reply import main_menu
@@ -62,6 +62,8 @@ async def handle_generate(message: Message, session):
     if not await acquire_queue(user.tier, user.telegram_id):
         await message.answer(badge("⏳ صف پر است. لطفاً صبر کنید..."))
         return
+
+    await log_event(session, user, EVENT_GENERATE_ATTEMPT)
 
     try:
         await set_generating(session, user, True)

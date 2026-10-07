@@ -25,6 +25,18 @@ class User(Base):
 
     images = relationship("GeneratedImage", back_populates="user", cascade="all, delete-orphan")
     transactions = relationship("Transaction", back_populates="user", cascade="all, delete-orphan")
+    events = relationship("UserEvent", back_populates="user", cascade="all, delete-orphan")
+
+
+class UserEvent(Base):
+    __tablename__ = "user_events"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    event_type = Column(String(30), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="events")
 
 
 class GeneratedImage(Base):
