@@ -11,10 +11,30 @@ from datetime import date, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from bot.config import settings
 from bot.db.models import GeneratedImage, User, UserEvent
 from bot.utils.timezone import tehran_day_utc_window, today_in_tehran
 
 logger = logging.getLogger(__name__)
+
+
+def is_admin(telegram_id: int) -> bool:
+    return telegram_id in (settings.ADMIN_IDS or [])
+
+
+def non_admin_criteria():
+    """SQLAlchemy criteria excluding admin users. None when no admins configured."""
+    if settings.ADMIN_IDS:
+        return User.telegram_id.notin_(settings.ADMIN_IDS)
+    return None
+
+
+def exclude_admins(stmt):
+    """Append admin exclusion to a select that joins (or selects from) User."""
+    filt = non_admin_criteria()
+    if filt is not None:
+        return stmt.where(filt)
+    return stmt
 
 # Event names
 USER_STARTED = "USER_STARTED"
@@ -41,7 +61,12 @@ async def log_event(
     event_type: str,
     meta: dict | None = None,
 ) -> None:
-    """Log an analytics event. Never raises — analytics must not break the main flow."""
+    """Log an analytics event. Never raises — analytics must not break the main flow.
+
+    Admin actions are never logged so testing doesn't pollute reports.
+    """
+    if is_admin(user.telegram_id):
+        return
     try:
         session.add(UserEvent(user_id=user.id, event_type=event_type, event_meta=meta))
         await session.commit()
@@ -104,44 +129,50 @@ async def _distinct_users_in_window(
     session: AsyncSession, event_type: str, day: date
 ) -> int:
     start, end = _day_window(day)
-    result = await session.execute(
-        select(func.count(func.distinct(UserEvent.user_id))).where(
+    stmt = (
+        select(func.count(func.distinct(UserEvent.user_id)))
+        .join(User, UserEvent.user_id == User.id)
+        .where(
             UserEvent.event_type == event_type,
             UserEvent.created_at >= start,
             UserEvent.created_at < end,
         )
     )
+    result = await session.execute(exclude_admins(stmt))
     return result.scalar() or 0
 
 
 async def _distinct_users_ever(session: AsyncSession, event_type: str) -> int:
-    result = await session.execute(
-        select(func.count(func.distinct(UserEvent.user_id))).where(
-            UserEvent.event_type == event_type
-        )
+    stmt = (
+        select(func.count(func.distinct(UserEvent.user_id)))
+        .join(User, UserEvent.user_id == User.id)
+        .where(UserEvent.event_type == event_type)
     )
+    result = await session.execute(exclude_admins(stmt))
     return result.scalar() or 0
 
 
 async def _event_count_in_window(session: AsyncSession, event_type: str, day: date) -> int:
     start, end = _day_window(day)
-    result = await session.execute(
-        select(func.count(UserEvent.id)).where(
+    stmt = (
+        select(func.count(UserEvent.id))
+        .join(User, UserEvent.user_id == User.id)
+        .where(
             UserEvent.event_type == event_type,
             UserEvent.created_at >= start,
             UserEvent.created_at < end,
         )
     )
+    result = await session.execute(exclude_admins(stmt))
     return result.scalar() or 0
 
 
 async def get_new_users_today(session: AsyncSession) -> int:
     start, end = _day_window(today_in_tehran())
-    result = await session.execute(
-        select(func.count(User.id)).where(
-            User.created_at >= start, User.created_at < end
-        )
+    stmt = select(func.count(User.id)).where(
+        User.created_at >= start, User.created_at < end
     )
+    result = await session.execute(exclude_admins(stmt))
     return result.scalar() or 0
 
 
@@ -150,7 +181,7 @@ async def get_new_users_with_success_today(session: AsyncSession) -> tuple[int, 
     today = today_in_tehran()
     start, end = _day_window(today)
     new_users = await get_new_users_today(session)
-    result = await session.execute(
+    stmt = (
         select(func.count(func.distinct(UserEvent.user_id)))
         .join(User, UserEvent.user_id == User.id)
         .where(
@@ -161,6 +192,7 @@ async def get_new_users_with_success_today(session: AsyncSession) -> tuple[int, 
             User.created_at < end,
         )
     )
+    result = await session.execute(exclude_admins(stmt))
     return result.scalar() or 0, new_users
 
 
@@ -183,7 +215,7 @@ async def get_free_limit_users_today(session: AsyncSession) -> int:
 async def get_new_free_limit_users_today(session: AsyncSession) -> int:
     today = today_in_tehran()
     start, end = _day_window(today)
-    result = await session.execute(
+    stmt = (
         select(func.count(func.distinct(UserEvent.user_id)))
         .join(User, UserEvent.user_id == User.id)
         .where(
@@ -194,6 +226,7 @@ async def get_new_free_limit_users_today(session: AsyncSession) -> int:
             User.created_at < end,
         )
     )
+    result = await session.execute(exclude_admins(stmt))
     return result.scalar() or 0
 
 
@@ -208,7 +241,7 @@ async def get_premium_clicks_today(session: AsyncSession) -> tuple[int, int]:
 async def get_new_premium_clickers_today(session: AsyncSession) -> int:
     today = today_in_tehran()
     start, end = _day_window(today)
-    result = await session.execute(
+    stmt = (
         select(func.count(func.distinct(UserEvent.user_id)))
         .join(User, UserEvent.user_id == User.id)
         .where(
@@ -219,6 +252,7 @@ async def get_new_premium_clickers_today(session: AsyncSession) -> int:
             User.created_at < end,
         )
     )
+    result = await session.execute(exclude_admins(stmt))
     return result.scalar() or 0
 
 
@@ -229,7 +263,7 @@ async def get_pricing_viewers_today(session: AsyncSession) -> int:
 async def get_new_pricing_viewers_today(session: AsyncSession) -> int:
     today = today_in_tehran()
     start, end = _day_window(today)
-    result = await session.execute(
+    stmt = (
         select(func.count(func.distinct(UserEvent.user_id)))
         .join(User, UserEvent.user_id == User.id)
         .where(
@@ -240,19 +274,23 @@ async def get_new_pricing_viewers_today(session: AsyncSession) -> int:
             User.created_at < end,
         )
     )
+    result = await session.execute(exclude_admins(stmt))
     return result.scalar() or 0
 
 
 async def get_plan_selection_today(session: AsyncSession) -> dict:
     """Return {plan: unique_user_count} for today's PLAN_SELECTED events."""
     start, end = _day_window(today_in_tehran())
-    result = await session.execute(
-        select(UserEvent.user_id, UserEvent.event_meta).where(
+    stmt = (
+        select(UserEvent.user_id, UserEvent.event_meta)
+        .join(User, UserEvent.user_id == User.id)
+        .where(
             UserEvent.event_type == PLAN_SELECTED,
             UserEvent.created_at >= start,
             UserEvent.created_at < end,
         )
     )
+    result = await session.execute(exclude_admins(stmt))
     per_plan: dict[str, set] = {}
     for user_id, meta in result.all():
         plan = (meta or {}).get("plan")
@@ -276,18 +314,20 @@ async def get_purchasers_total(session: AsyncSession) -> int:
 async def _intersection_count(
     session: AsyncSession, event_a: str, event_b: str
 ) -> int:
-    a = (
-        select(UserEvent.user_id)
-        .where(UserEvent.event_type == event_a)
-        .distinct()
-        .subquery()
-    )
-    b = (
-        select(UserEvent.user_id)
-        .where(UserEvent.event_type == event_b)
-        .distinct()
-        .subquery()
-    )
+    admin_criteria = non_admin_criteria()
+
+    def _users_with(event_type: str):
+        stmt = (
+            select(UserEvent.user_id)
+            .join(User, UserEvent.user_id == User.id)
+            .where(UserEvent.event_type == event_type)
+        )
+        if admin_criteria is not None:
+            stmt = stmt.where(admin_criteria)
+        return stmt.distinct().subquery()
+
+    a = _users_with(event_a)
+    b = _users_with(event_b)
     result = await session.execute(
         select(func.count()).select_from(a.join(b, a.c.user_id == b.c.user_id))
     )
@@ -302,7 +342,7 @@ def safe_rate(numerator: int, denominator: int) -> float:
 
 async def get_conversions(session: AsyncSession) -> dict:
     """All-time distinct-user conversion rates (0.0–1.0)."""
-    result = await session.execute(select(func.count(User.id)))
+    result = await session.execute(exclude_admins(select(func.count(User.id))))
     total_users = result.scalar() or 0
     purchasers = await get_purchasers_total(session)
     limit_users = await _distinct_users_ever(session, FREE_LIMIT_REACHED)
@@ -334,7 +374,9 @@ async def get_retention(
     t_start, t_end = _day_window(target)
 
     cohort_q = await session.execute(
-        select(User.id).where(User.created_at >= c_start, User.created_at < c_end)
+        exclude_admins(
+            select(User.id).where(User.created_at >= c_start, User.created_at < c_end)
+        )
     )
     cohort_ids = [row[0] for row in cohort_q.all()]
     if not cohort_ids:
@@ -364,9 +406,12 @@ async def get_retention_overview(session: AsyncSession) -> dict[int, float]:
 
 async def get_generated_images_count_today(session: AsyncSession) -> int:
     start, end = _day_window(today_in_tehran())
-    result = await session.execute(
-        select(func.count(GeneratedImage.id)).where(
+    stmt = (
+        select(func.count(GeneratedImage.id))
+        .join(User, GeneratedImage.user_id == User.id)
+        .where(
             GeneratedImage.created_at >= start, GeneratedImage.created_at < end
         )
     )
+    result = await session.execute(exclude_admins(stmt))
     return result.scalar() or 0

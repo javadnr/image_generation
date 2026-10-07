@@ -426,6 +426,67 @@ async def test_free_limit_logged_once_per_day(db):
     assert await _count_events(db, az.FREE_LIMIT_REACHED) >= 1
 
 
+# ─── Admin exclusion ────────────────────────────────────────────────────
+
+
+@pytest_asyncio.fixture
+def admin_ids(monkeypatch):
+    from bot.config import settings
+
+    monkeypatch.setattr(settings, "ADMIN_IDS", [999001])
+    return [999001]
+
+
+@pytest.mark.asyncio
+async def test_admin_events_not_logged(db, admin_ids):
+    admin = await _make_user(db, 999001)
+    await db.commit()
+
+    await az.log_event(db, admin, az.IMAGE_GENERATION_SUCCESS)
+    await az.log_event(db, admin, az.BUY_SUBSCRIPTION_CLICKED)
+    await az.ensure_user_started(db, admin)
+
+    assert await _count_events(db, az.IMAGE_GENERATION_SUCCESS) == 0
+    assert await _count_events(db, az.BUY_SUBSCRIPTION_CLICKED) == 0
+    assert await _count_events(db, az.USER_STARTED) == 0
+
+
+@pytest.mark.asyncio
+async def test_admin_excluded_from_unique_counts(db, admin_ids):
+    from bot.services import user as user_svc
+
+    admin = await _make_user(db, 999001)
+    normal = await _make_user(db, 701)
+    await db.commit()
+
+    # admin events logged directly (historical data) must still be filtered
+    db.add(UserEvent(user_id=admin.id, event_type=az.IMAGE_GENERATION_SUCCESS))
+    for _ in range(3):
+        db.add(UserEvent(user_id=admin.id, event_type=az.BUY_SUBSCRIPTION_CLICKED))
+    await db.commit()
+    await az.log_event(db, normal, az.IMAGE_GENERATION_SUCCESS)
+    await az.log_event(db, normal, az.BUY_SUBSCRIPTION_CLICKED)
+
+    activated, new_users = await az.get_new_users_with_success_today(db)
+    assert activated == 1
+    assert new_users == 1
+
+    total, unique = await az.get_premium_clicks_today(db)
+    assert total == 1
+    assert unique == 1
+
+    assert await az.get_purchasers_total(db) == 0
+    assert await user_svc.get_joined_today_count(db) == 1
+
+
+@pytest.mark.asyncio
+async def test_non_admin_unaffected_without_admins_configured(db):
+    user = await _make_user(db, 702)
+    await db.commit()
+    await az.log_event(db, user, az.IMAGE_GENERATION_SUCCESS)
+    assert await az.get_images_success_today(db) >= 1
+
+
 # ─── Bot Status template integrity ──────────────────────────────────────
 
 

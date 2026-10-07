@@ -2,6 +2,7 @@ from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from bot.db.models import User, GeneratedImage
 from bot.config import settings
+from bot.services.analytics import exclude_admins
 from bot.utils.timezone import tehran_day_utc_window, today_in_tehran
 
 
@@ -154,22 +155,20 @@ async def get_all_users_count(session: AsyncSession) -> int:
 
 async def get_active_today_count(session: AsyncSession) -> int:
     today = today_in_tehran()
-    result = await session.execute(
-        select(func.count(User.id)).where(
-            User.last_reset_date == today,
-            User.daily_used > 0,
-        )
+    stmt = select(func.count(User.id)).where(
+        User.last_reset_date == today,
+        User.daily_used > 0,
     )
+    result = await session.execute(exclude_admins(stmt))
     return result.scalar()
 
 
 async def get_joined_today_count(session: AsyncSession) -> int:
     start, end = tehran_day_utc_window(today_in_tehran())
-    result = await session.execute(
-        select(func.count(User.id)).where(
-            User.created_at >= start, User.created_at < end
-        )
+    stmt = select(func.count(User.id)).where(
+        User.created_at >= start, User.created_at < end
     )
+    result = await session.execute(exclude_admins(stmt))
     return result.scalar()
 
 
@@ -182,7 +181,7 @@ async def get_tier_users_count(session: AsyncSession, tier: str) -> int:
 
 async def get_tier_images_today(session: AsyncSession, tier: str) -> int:
     start, end = tehran_day_utc_window(today_in_tehran())
-    result = await session.execute(
+    stmt = (
         select(func.count(GeneratedImage.id))
         .join(User)
         .where(
@@ -191,6 +190,7 @@ async def get_tier_images_today(session: AsyncSession, tier: str) -> int:
             GeneratedImage.created_at < end,
         )
     )
+    result = await session.execute(exclude_admins(stmt))
     return result.scalar()
 
 
