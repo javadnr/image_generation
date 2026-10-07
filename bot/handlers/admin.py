@@ -1,3 +1,5 @@
+import logging
+
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from bot.config import settings
@@ -6,12 +8,16 @@ from bot.services.user import (
     get_tier_users_count, get_tier_images_today, reset_all_daily, set_tier,
 )
 from bot.services import analytics as az
+from bot.services.payment import activate_plan, PLAN_LIMITS, PLAN_MAX_LIMITS
 from bot.keyboards.inline import admin_status
+from bot.keyboards.reply import main_menu
 from bot.db.engine import async_session
 from sqlalchemy import select, update
-from bot.db.models import BotSettings
+from bot.db.models import BotSettings, User
 from bot.texts import badge
 import bot.texts as texts
+
+logger = logging.getLogger(__name__)
 
 router = Router()
 
@@ -170,6 +176,58 @@ async def set_premium_cmd(message: Message, session):
             )
     else:
         await message.answer(badge(f"⚠️ کاربر با ID {user_id} یافت نشد."))
+
+
+@router.message(F.text.startswith("/activate"))
+async def activate_cmd(message: Message, session):
+    if message.from_user.id not in settings.ADMIN_IDS:
+        return
+
+    parts = message.text.split()
+    if len(parts) != 3:
+        await message.answer(badge(texts.ADMIN_ACTIVATE_USAGE))
+        return
+
+    tier = parts[1].lower()
+    if tier not in ("bronze", "silver", "gold"):
+        await message.answer(badge(texts.ADMIN_INVALID_TIER))
+        return
+
+    try:
+        user_id = int(parts[2])
+    except ValueError:
+        await message.answer(badge(texts.ADMIN_ACTIVATE_USAGE))
+        return
+
+    result = await session.execute(select(User).where(User.telegram_id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        await message.answer(badge(f"⚠️ کاربر با ID {user_id} یافت نشد."))
+        return
+
+    await activate_plan(session, user, tier)
+    await message.answer(badge(texts.ADMIN_ACTIVATED.format(tier=tier, user_id=user_id)))
+
+    from bot.services.report import send_premium_report
+    await send_premium_report(
+        message.bot, user_id, tier, expire_dt=user.premium_expire_date
+    )
+
+    expire = user.premium_expire_date.strftime("%Y/%m/%d") if user.premium_expire_date else "—"
+    try:
+        await message.bot.send_message(
+            user_id,
+            badge(
+                f"✅ اشتراک {texts.TIER_NAMES_FA[tier]} برای شما فعال شد!\n\n"
+                f"📊 سقف روزانه: {PLAN_LIMITS[tier]} تصویر\n"
+                f"📊 سقف کل: {PLAN_MAX_LIMITS[tier]} تصویر\n"
+                f"📅 پایان اشتراک: {expire}"
+            ),
+            reply_markup=main_menu(user),
+        )
+    except Exception:
+        logger.exception("Failed to notify user %d about activation", user_id)
+        await message.answer(badge("⚠️ فعال‌سازی انجام شد اما اطلاع‌رسانی به کاربر ممکن نشد (ربات بلاک شده؟)."))
 
 
 @router.message(F.text.startswith("/stats"))

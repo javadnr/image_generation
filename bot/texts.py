@@ -108,6 +108,7 @@ ERROR_MODERATION = "⚠️ پرامپت شما مطابق سیاست‌های م
 
 # Admin premium activation
 ADMIN_USAGE = "استفاده: /set_premium <user_id> <tier>"
+ADMIN_ACTIVATE_USAGE = "استفاده: /activate <tier> <user_id>\nمثال: /activate silver 123456789"
 ADMIN_ACTIVATED = "✅ پریمیوم {tier} برای کاربر {user_id} فعال شد."
 ADMIN_INVALID_TIER = "⚠️ پلن نامعتبر. tiers: free, bronze, silver, gold"
 ADMIN_REPORT = "💎 اکانت پریمیوم فعال شد\n👤 کاربر: {user_id}\n📦 پلن: {tier}\n💰 قیمت: {price} تومان"
