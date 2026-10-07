@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.db.models import User, Transaction
 from bot.config import settings
+from bot.services.analytics import log_event, PAYMENT_SUCCESS
 from bot.services.zarinpal import ZarinPalClient
 from bot.services.bale_payment import BalePaymentProvider
 
@@ -134,6 +135,10 @@ async def verify_zarinpal_payment(session: AsyncSession, tx_id: str) -> dict:
         tx.payment_ref_id = status
         tx.paid_at = datetime.utcnow()
         await activate_plan(session, user, tx.plan)
+        await log_event(
+            session, user, PAYMENT_SUCCESS,
+            {"plan": tx.plan, "amount": tx.amount, "provider": "zarinpal"},
+        )
         return {
             "success": True,
             "plan": tx.plan,
@@ -208,6 +213,10 @@ async def complete_bale_payment(
     tx.payment_ref_id = f"{payment_charge_id}:{provider_charge_id}"
     tx.paid_at = datetime.utcnow()
     await activate_plan(session, user, tx.plan)
+    await log_event(
+        session, user, PAYMENT_SUCCESS,
+        {"plan": tx.plan, "amount": tx.amount, "provider": "bale"},
+    )
 
     return {
         "success": True,

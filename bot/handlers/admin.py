@@ -4,9 +4,8 @@ from bot.config import settings
 from bot.services.user import (
     get_all_users_count, get_active_today_count, get_joined_today_count,
     get_tier_users_count, get_tier_images_today, reset_all_daily, set_tier,
-    get_new_users_attempted_today, get_new_users_succeeded_today,
-    get_premium_clickers_today,
 )
+from bot.services import analytics as az
 from bot.keyboards.inline import admin_status
 from bot.db.engine import async_session
 from sqlalchemy import select, update
@@ -39,9 +38,24 @@ async def bot_status(message: Message, session):
     silver_users = await get_tier_users_count(session, "silver")
     gold_users = await get_tier_users_count(session, "gold")
 
-    new_attempted = await get_new_users_attempted_today(session)
-    new_succeeded = await get_new_users_succeeded_today(session)
-    premium_clickers = await get_premium_clickers_today(session)
+    activated_today, joined = await az.get_new_users_with_success_today(session)
+    started_today = await az.get_images_started_today(session)
+    success_today = await az.get_images_success_today(session)
+    failed_today = await az.get_images_failed_today(session)
+    limit_users = await az.get_free_limit_users_today(session)
+    limit_new = await az.get_new_free_limit_users_today(session)
+    click_total, click_unique = await az.get_premium_clicks_today(session)
+    pricing_viewers = await az.get_pricing_viewers_today(session)
+    pricing_new = await az.get_new_pricing_viewers_today(session)
+    plan_sel = await az.get_plan_selection_today(session)
+    pay_started, pay_success = await az.get_payments_today(session)
+    conv = await az.get_conversions(session)
+    retention = await az.get_retention_overview(session)
+
+    def pct(x: float) -> str:
+        return f"{x * 100:.1f}"
+
+    activation_rate = pct(az.safe_rate(activated_today, joined if joined else joined_today))
 
     status_text = "فعال" if bot_enabled else "غیرفعال"
 
@@ -51,9 +65,30 @@ async def bot_status(message: Message, session):
             total_users=total_users,
             active_today=active_today,
             joined_today=joined_today,
-            new_attempted=new_attempted,
-            new_succeeded=new_succeeded,
-            premium_clickers=premium_clickers,
+            activated_today=activated_today,
+            activation_rate=activation_rate,
+            started_today=started_today,
+            success_today=success_today,
+            failed_today=failed_today,
+            limit_users=limit_users,
+            limit_new=limit_new,
+            click_total=click_total,
+            click_unique=click_unique,
+            pricing_viewers=pricing_viewers,
+            pricing_new=pricing_new,
+            plan_bronze=plan_sel.get("bronze", 0),
+            plan_silver=plan_sel.get("silver", 0),
+            plan_gold=plan_sel.get("gold", 0),
+            pay_started=pay_started,
+            pay_success=pay_success,
+            conv_user=pct(conv["user_buyer"]),
+            conv_limit=pct(conv["limit_buyer"]),
+            conv_pricing=pct(conv["pricing_buyer"]),
+            d1=pct(retention.get(1, 0.0)),
+            d3=pct(retention.get(3, 0.0)),
+            d7=pct(retention.get(7, 0.0)),
+            d14=pct(retention.get(14, 0.0)),
+            d30=pct(retention.get(30, 0.0)),
             free_images=free_images,
             bronze_images=bronze_images,
             silver_images=silver_images,

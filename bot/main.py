@@ -6,10 +6,10 @@ from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.client.telegram import TelegramAPIServer
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-import pytz
 from sqlalchemy import update
 
 from bot.config import settings
+from bot.utils.timezone import IRAN_TZ
 from bot.db.engine import init_db, async_session
 from bot.db.models import BotSettings, User
 from bot.middlewares.db import DBSessionMiddleware
@@ -24,14 +24,11 @@ from bot.handlers import start, generate, edit, balance, premium, settings as se
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-IRAN_TZ = pytz.timezone("Asia/Tehran")
-
-
 async def reset_daily_quotas():
     async with async_session() as session:
-        from datetime import date
+        from bot.utils.timezone import today_in_tehran
         await session.execute(
-            update(User).values(daily_used=0, last_reset_date=date.today())
+            update(User).values(daily_used=0, last_reset_date=today_in_tehran())
         )
         await session.commit()
     logger.info("Daily quotas reset.")

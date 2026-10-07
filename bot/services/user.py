@@ -1,14 +1,8 @@
-import logging
-from datetime import date
 from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from bot.db.models import User, GeneratedImage, UserEvent
+from bot.db.models import User, GeneratedImage
 from bot.config import settings
-
-logger = logging.getLogger(__name__)
-
-EVENT_GENERATE_ATTEMPT = "generate_attempt"
-EVENT_PREMIUM_CLICK = "premium_click"
+from bot.utils.timezone import tehran_day_utc_window, today_in_tehran
 
 
 def get_tier_limit(tier: str) -> int:
@@ -42,7 +36,7 @@ async def get_or_create_user(session: AsyncSession, telegram_id: int) -> User:
 
 
 async def check_and_reset_daily(session: AsyncSession, user: User) -> User:
-    today = date.today()
+    today = today_in_tehran()
     if user.last_reset_date != today:
         user.daily_used = 0
         user.last_reset_date = today
@@ -159,7 +153,7 @@ async def get_all_users_count(session: AsyncSession) -> int:
 
 
 async def get_active_today_count(session: AsyncSession) -> int:
-    today = date.today()
+    today = today_in_tehran()
     result = await session.execute(
         select(func.count(User.id)).where(
             User.last_reset_date == today,
@@ -170,9 +164,11 @@ async def get_active_today_count(session: AsyncSession) -> int:
 
 
 async def get_joined_today_count(session: AsyncSession) -> int:
-    today = date.today()
+    start, end = tehran_day_utc_window(today_in_tehran())
     result = await session.execute(
-        select(func.count(User.id)).where(func.date(User.created_at) == today)
+        select(func.count(User.id)).where(
+            User.created_at >= start, User.created_at < end
+        )
     )
     return result.scalar()
 
@@ -185,65 +181,24 @@ async def get_tier_users_count(session: AsyncSession, tier: str) -> int:
 
 
 async def get_tier_images_today(session: AsyncSession, tier: str) -> int:
-    today = date.today()
+    start, end = tehran_day_utc_window(today_in_tehran())
     result = await session.execute(
         select(func.count(GeneratedImage.id))
         .join(User)
-        .where(User.tier == tier, func.date(GeneratedImage.created_at) == today)
+        .where(
+            User.tier == tier,
+            GeneratedImage.created_at >= start,
+            GeneratedImage.created_at < end,
+        )
     )
     return result.scalar()
 
 
 async def reset_all_daily(session: AsyncSession) -> None:
     await session.execute(
-        update(User).values(daily_used=0, last_reset_date=date.today())
+        update(User).values(daily_used=0, last_reset_date=today_in_tehran())
     )
     await session.commit()
 
 
-async def log_event(session: AsyncSession, user: User, event_type: str) -> None:
-    """Log a user event. Never raises — analytics must not break the main flow."""
-    try:
-        session.add(UserEvent(user_id=user.id, event_type=event_type))
-        await session.commit()
-    except Exception:
-        logger.exception("Failed to log event %s user=%d", event_type, user.telegram_id)
-        await session.rollback()
 
-
-async def get_new_users_attempted_today(session: AsyncSession) -> int:
-    """Unique users who joined today AND attempted at least one generation."""
-    today = date.today()
-    result = await session.execute(
-        select(func.count(func.distinct(UserEvent.user_id)))
-        .join(User, UserEvent.user_id == User.id)
-        .where(
-            func.date(User.created_at) == today,
-            func.date(UserEvent.created_at) == today,
-            UserEvent.event_type == EVENT_GENERATE_ATTEMPT,
-        )
-    )
-    return result.scalar() or 0
-
-
-async def get_new_users_succeeded_today(session: AsyncSession) -> int:
-    """Unique users who joined today AND successfully generated at least one image."""
-    today = date.today()
-    result = await session.execute(
-        select(func.count(func.distinct(GeneratedImage.user_id)))
-        .join(User, GeneratedImage.user_id == User.id)
-        .where(func.date(User.created_at) == today)
-    )
-    return result.scalar() or 0
-
-
-async def get_premium_clickers_today(session: AsyncSession) -> int:
-    """Unique users who clicked Buy Subscription today."""
-    today = date.today()
-    result = await session.execute(
-        select(func.count(func.distinct(UserEvent.user_id))).where(
-            func.date(UserEvent.created_at) == today,
-            UserEvent.event_type == EVENT_PREMIUM_CLICK,
-        )
-    )
-    return result.scalar() or 0

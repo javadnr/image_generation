@@ -3,6 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton
 from bot.services.user import get_or_create_user, set_resolution, toggle_optimize
+from bot.services.analytics import log_event, FEATURE_USED
 from bot.keyboards.inline import settings_menu, resolution_picker
 from bot.keyboards.reply import main_menu
 from bot.texts import badge
@@ -70,6 +71,7 @@ async def set_resolution_handler(callback: CallbackQuery, session):
     width, height = int(parts[2]), int(parts[3])
     user = await get_or_create_user(session, callback.from_user.id)
     await set_resolution(session, user, width, height)
+    await log_event(session, user, FEATURE_USED, {"feature": "resolution"})
     await callback.message.edit_text(
         badge(texts.RESOLUTION_SET.format(width=width, height=height)),
         reply_markup=resolution_picker(width, height),
@@ -111,6 +113,7 @@ async def handle_custom_resolution(message: Message, session, state: FSMContext)
 
     await state.clear()
     await set_resolution(session, user, w, h)
+    await log_event(session, user, FEATURE_USED, {"feature": "resolution"})
     await message.answer(
         badge(texts.RESOLUTION_SET.format(width=w, height=h)),
         reply_markup=main_menu(user),

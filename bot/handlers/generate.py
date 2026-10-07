@@ -3,7 +3,12 @@ import logging
 from aiogram import Router, F
 from aiogram.types import Message, BufferedInputFile
 from bot.config import settings
-from bot.services.user import get_or_create_user, check_and_reset_daily, can_generate, consume_quota, set_generating, save_image, get_tier_limit, get_remaining, check_max_limit, log_event, EVENT_GENERATE_ATTEMPT
+from bot.services.user import get_or_create_user, check_and_reset_daily, can_generate, consume_quota, set_generating, save_image, get_tier_limit, get_remaining, check_max_limit
+from bot.services.analytics import (
+    log_event, maybe_log_first_generation_start, maybe_log_free_limit,
+    IMAGE_GENERATION_STARTED, IMAGE_GENERATION_SUCCESS, IMAGE_GENERATION_FAILED,
+    HELP_VIEWED,
+)
 from bot.services.queue import acquire_queue, release_queue
 from bot.services.image import generate_image
 from bot.keyboards.reply import main_menu
@@ -25,6 +30,8 @@ MENU_BUTTONS = {
 
 @router.message(F.text == texts.MAIN_MENU_GENERATE)
 async def generate_prompt(message: Message, session):
+    user = await get_or_create_user(session, message.from_user.id)
+    await log_event(session, user, HELP_VIEWED)
     await message.answer(badge(
         "🎨 ساخت تصویر\n\n"
         "ایده یا چیزی که می‌خوای ببینی رو به زبان طبیعی برام بنویس تا برات به تصویر تبدیلش کنم ✨\n\n"
@@ -56,6 +63,7 @@ async def handle_generate(message: Message, session):
         return
 
     if not await can_generate(session, user):
+        await maybe_log_free_limit(session, user)
         await message.answer(badge(texts.QUOTA_EXCEEDED))
         return
 
@@ -63,7 +71,8 @@ async def handle_generate(message: Message, session):
         await message.answer(badge("⏳ صف پر است. لطفاً صبر کنید..."))
         return
 
-    await log_event(session, user, EVENT_GENERATE_ATTEMPT)
+    await maybe_log_first_generation_start(session, user)
+    await log_event(session, user, IMAGE_GENERATION_STARTED)
 
     try:
         await set_generating(session, user, True)
@@ -104,16 +113,21 @@ async def handle_generate(message: Message, session):
 
         await consume_quota(session, user)
         await save_image(session, user, sent_msg_id, file_path, message.text)
+        await log_event(session, user, IMAGE_GENERATION_SUCCESS)
 
     except Exception as e:
         logging.error("Image generation failed: %s", e, exc_info=True)
         error_text = str(e)
         if "rate" in error_text.lower():
             error_msg = texts.ERROR_WAIT
+            error_kind = "rate_limit"
         elif "moderation" in error_text.lower():
             error_msg = texts.ERROR_MODERATION
+            error_kind = "moderation"
         else:
             error_msg = texts.ERROR_GENERIC
+            error_kind = "generic"
+        await log_event(session, user, IMAGE_GENERATION_FAILED, {"error": error_kind})
         try:
             await gen_msg.edit_text(badge(error_msg))
         except Exception:

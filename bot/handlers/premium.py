@@ -1,12 +1,16 @@
 from datetime import datetime
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-from bot.services.user import get_or_create_user, get_tier_limit, get_tier_max_limit, log_event, EVENT_PREMIUM_CLICK
+from bot.services.user import get_or_create_user, get_tier_limit, get_tier_max_limit
 from bot.services.report import send_premium_report, TIER_PRICES
+from bot.services.analytics import (
+    log_event, PRICING_VIEWED, BUY_SUBSCRIPTION_CLICKED, PLAN_SELECTED,
+    PAYMENT_STARTED,
+)
 from bot.services.payment import (
     create_zarinpal_purchase, verify_zarinpal_payment,
     create_bale_purchase, get_bale_payment_provider,
-    PLAN_LIMITS, PLAN_MAX_LIMITS,
+    PLAN_LIMITS, PLAN_MAX_LIMITS, PLAN_PRICES,
 )
 from bot.keyboards.inline import premium_menu
 from bot.keyboards.reply import main_menu
@@ -78,7 +82,8 @@ def premium_text(user) -> str:
 @router.message(F.text == texts.MAIN_MENU_PREMIUM)
 async def premium(message: Message, session):
     user = await get_or_create_user(session, message.from_user.id)
-    await log_event(session, user, EVENT_PREMIUM_CLICK)
+    await log_event(session, user, BUY_SUBSCRIPTION_CLICKED)
+    await log_event(session, user, PRICING_VIEWED)
     await message.answer(premium_text(user), reply_markup=premium_menu(user))
 
 
@@ -90,10 +95,15 @@ async def buy_tier(callback: CallbackQuery, session):
         return
 
     user = await get_or_create_user(session, callback.from_user.id)
+    await log_event(session, user, PLAN_SELECTED, {"plan": tier, "price": PLAN_PRICES[tier]})
 
     try:
         if settings.API_SERVER == "bale":
             result = await create_bale_purchase(session, user, tier)
+            await log_event(
+                session, user, PAYMENT_STARTED,
+                {"plan": tier, "amount": result["amount_toman"], "provider": "bale"},
+            )
             await callback.answer()
 
             bale_provider = get_bale_payment_provider()
@@ -110,6 +120,10 @@ async def buy_tier(callback: CallbackQuery, session):
             )
         else:
             result = await create_zarinpal_purchase(session, user, tier)
+            await log_event(
+                session, user, PAYMENT_STARTED,
+                {"plan": tier, "amount": result["amount_toman"], "provider": "zarinpal"},
+            )
             await callback.answer()
 
             tx_id = result["transaction_id"]

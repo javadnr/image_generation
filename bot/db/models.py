@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from sqlalchemy import Column, Integer, BigInteger, String, Boolean, Date, DateTime, ForeignKey, Text, Index, text
+from sqlalchemy import Column, Integer, BigInteger, String, Boolean, Date, DateTime, ForeignKey, Text, Index, text, JSON
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
@@ -33,10 +33,16 @@ class UserEvent(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    event_type = Column(String(30), nullable=False)
+    event_type = Column(String(40), nullable=False)
+    event_meta = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="events")
+
+    __table_args__ = (
+        Index("ix_user_events_type_created", "event_type", "created_at"),
+        Index("ix_user_events_user", "user_id"),
+    )
 
 
 class GeneratedImage(Base):
