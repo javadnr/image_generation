@@ -66,7 +66,6 @@ async def edit_image(file_path: str, prompt: str, tier: str, width: int = 1024, 
             image=f,
             prompt=prompt,
             size=f"{width}x{height}",
-            quality="low",
         )
     img = result.data[0]
     tokens = _extract_tokens(result)
