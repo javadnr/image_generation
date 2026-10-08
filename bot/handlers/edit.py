@@ -14,6 +14,7 @@ from bot.services.queue import acquire_queue, release_queue
 from bot.services.image import edit_image, TIER_MODELS
 from bot.services.report import send_error_report, send_processed_report
 from bot.keyboards.reply import main_menu
+from bot.keyboards.inline import premium_menu
 from bot.texts import badge
 import bot.texts as texts
 
@@ -26,6 +27,10 @@ IMAGES_DIR = "images"
 async def handle_edit(message: Message, session):
     user = await get_or_create_user(session, message.from_user.id)
     user = await check_and_reset_daily(session, user)
+
+    if user.tier == "free":
+        await message.answer(badge(texts.EDIT_PREMIUM_ONLY), reply_markup=premium_menu(user))
+        return
 
     if await check_max_limit(session, user):
         await message.answer(badge(texts.QUOTA_EXCEEDED_MAX))
@@ -150,6 +155,10 @@ async def handle_edit(message: Message, session):
 async def handle_photo_edit(message: Message, session, bot):
     user = await get_or_create_user(session, message.from_user.id)
     user = await check_and_reset_daily(session, user)
+
+    if user.tier == "free":
+        await message.answer(badge(texts.EDIT_PREMIUM_ONLY), reply_markup=premium_menu(user))
+        return
 
     if await check_max_limit(session, user):
         await message.answer(badge(texts.QUOTA_EXCEEDED_MAX))
