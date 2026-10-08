@@ -45,6 +45,7 @@ async def generate_image(prompt: str, tier: str, width: int = 1024, height: int 
         model=model,
         prompt=prompt,
         size=f"{width}x{height}",
+        quality="low",
         n=1,
     )
     img = result.data[0]
