@@ -28,7 +28,9 @@ async def reset_daily_quotas():
     async with async_session() as session:
         from bot.utils.timezone import today_in_tehran
         await session.execute(
-            update(User).values(daily_used=0, last_reset_date=today_in_tehran())
+            update(User)
+            .where(User.tier != "free")
+            .values(daily_used=0, last_reset_date=today_in_tehran())
         )
         await session.commit()
     logger.info("Daily quotas reset.")

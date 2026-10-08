@@ -37,6 +37,9 @@ async def get_or_create_user(session: AsyncSession, telegram_id: int) -> User:
 
 
 async def check_and_reset_daily(session: AsyncSession, user: User) -> User:
+    if user.tier == "free":
+        # Free credit is one-time, never resets.
+        return user
     today = today_in_tehran()
     if user.last_reset_date != today:
         user.daily_used = 0
@@ -185,7 +188,9 @@ async def get_tier_images_today(session: AsyncSession, tier: str) -> int:
 
 async def reset_all_daily(session: AsyncSession) -> None:
     await session.execute(
-        update(User).values(daily_used=0, last_reset_date=today_in_tehran())
+        update(User)
+        .where(User.tier != "free")
+        .values(daily_used=0, last_reset_date=today_in_tehran())
     )
     await session.commit()
 

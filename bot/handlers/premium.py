@@ -4,8 +4,8 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 from bot.services.user import get_or_create_user, get_tier_limit, get_tier_max_limit
 from bot.services.report import send_premium_report, TIER_PRICES
 from bot.services.analytics import (
-    log_event, PRICING_VIEWED, BUY_SUBSCRIPTION_CLICKED, PLAN_SELECTED,
-    PAYMENT_STARTED,
+    log_event, maybe_log_free_limit, PRICING_VIEWED, BUY_SUBSCRIPTION_CLICKED,
+    PLAN_SELECTED, PAYMENT_STARTED,
 )
 from bot.services.payment import (
     create_zarinpal_purchase, verify_zarinpal_payment,
@@ -72,11 +72,20 @@ def premium_text(user) -> str:
         f"• حداکثر {gold_max} تصویر\n"
         f"• بدون صف پردازش ⚡️\n\n"
         f"🆓 پلن رایگان\n"
-        f"• روزانه {get_tier_limit('free')} تصویر\n"
+        f"• {get_tier_limit('free')} تصویر رایگان (یک‌بار مصرف)\n"
         f"• صف پردازش تا {settings.FREE_QUEUE_SIZE} کاربر همزمان\n\n"
         f"💡 همه تصاویر با مدل‌های پیشرفته OpenAI تولید می‌شوند.\n\n"
         f"👇 پلن موردنظرت رو انتخاب کن:"
     )
+
+
+async def answer_quota_exceeded(message: Message, session, user) -> None:
+    """Free users with spent one-time credit get the premium plans message."""
+    await maybe_log_free_limit(session, user)
+    if user.tier == "free":
+        await message.answer(premium_text(user), reply_markup=premium_menu(user))
+    else:
+        await message.answer(badge(texts.QUOTA_EXCEEDED))
 
 
 @router.message(F.text == texts.MAIN_MENU_PREMIUM)
