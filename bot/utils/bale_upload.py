@@ -24,7 +24,10 @@ async def send_photo_raw(
             content_type="image/png",
         )
         async with aiohttp.ClientSession() as session, session.post(url, data=data) as resp:
-            return await resp.json()
+            result = await resp.json()
+            if not result.get("ok"):
+                raise RuntimeError(f"Bale sendPhoto failed for chat {chat_id}: {result}")
+            return result
 
 
 async def send_photo_bytes_raw(
@@ -46,4 +49,7 @@ async def send_photo_bytes_raw(
         content_type="image/png",
     )
     async with aiohttp.ClientSession() as session, session.post(url, data=data) as resp:
-        return await resp.json()
+        result = await resp.json()
+        if not result.get("ok"):
+            raise RuntimeError(f"Bale sendPhoto failed for chat {chat_id}: {result}")
+        return result
