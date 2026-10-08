@@ -19,7 +19,7 @@ from bot.middlewares.force_join import (
     PrivateChatMiddleware,
 )
 from bot.services.queue import init_queues
-from bot.handlers import start, generate, edit, balance, premium, settings as settings_handler, admin
+from bot.handlers import start, generate, edit, balance, premium, admin
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -85,7 +85,6 @@ async def main():
     dp.include_router(admin.router)
     dp.include_router(premium.router)
     dp.include_router(balance.router)
-    dp.include_router(settings_handler.router)
     dp.include_router(generate.router)
     dp.include_router(edit.router)
 

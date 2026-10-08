@@ -55,3 +55,39 @@ async def send_premium_report(
         )
     except Exception:
         logger.exception("Failed to send premium report user=%d plan=%s", user_id, tier)
+
+
+async def send_error_report(
+    bot: Bot,
+    *,
+    user_id: int,
+    username: str | None = None,
+    tier: str = "—",
+    model: str = "—",
+    operation: str = "generate",
+    prompt: str = "",
+    error: str = "",
+    size: str = "",
+) -> None:
+    """DM a detailed failure report to all admins. Never raises."""
+    if not settings.ADMIN_IDS:
+        return
+    username_display = f"@{username}" if username else "—"
+    text = (
+        "❌ گزارش خطای تولید تصویر\n"
+        "─────────────────\n"
+        f"👤 شناسه کاربر: {user_id}\n"
+        f"📛 نام کاربری: {username_display}\n"
+        f"📦 پلن: {tier}\n"
+        f"🤖 مدل: {model}\n"
+        f"⚙️ عملیات: {operation}\n"
+        f"🖼 ابعاد: {size or '—'}\n"
+        f"📝 پرامپت: {prompt[:300] or '—'}\n"
+        f"⚠️ خطا: {error[:500] or '—'}\n"
+        f"⏰ زمان: {format_jalali(datetime.now())}"
+    )
+    for admin_id in settings.ADMIN_IDS:
+        try:
+            await bot.send_message(admin_id, text)
+        except Exception:
+            logger.exception("Failed to send error report to admin=%d", admin_id)

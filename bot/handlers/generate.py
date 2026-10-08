@@ -10,7 +10,8 @@ from bot.services.analytics import (
     HELP_VIEWED,
 )
 from bot.services.queue import acquire_queue, release_queue
-from bot.services.image import generate_image
+from bot.services.image import generate_image, TIER_MODELS
+from bot.services.report import send_error_report
 from bot.keyboards.reply import main_menu
 from bot.texts import badge
 import bot.texts as texts
@@ -23,7 +24,6 @@ MENU_BUTTONS = {
     texts.MAIN_MENU_GENERATE,
     texts.MAIN_MENU_BALANCE,
     texts.MAIN_MENU_PREMIUM,
-    texts.MAIN_MENU_SETTINGS,
     texts.MAIN_MENU_ADMIN,
 }
 
@@ -74,12 +74,13 @@ async def handle_generate(message: Message, session):
     await maybe_log_first_generation_start(session, user)
     await log_event(session, user, IMAGE_GENERATION_STARTED)
 
+    width = user.image_width if user.tier != "free" else 1024
+    height = user.image_height if user.tier != "free" else 1024
+
     try:
         await set_generating(session, user, True)
         gen_msg = await message.answer(badge("درحال ساخت...."))
 
-        width = user.image_width if user.tier != "free" else 1024
-        height = user.image_height if user.tier != "free" else 1024
         logging.info("User %d tier=%s generating %dx%d", user.telegram_id, user.tier, width, height)
 
         image_bytes = await generate_image(message.text, user.tier, width, height)
@@ -128,6 +129,17 @@ async def handle_generate(message: Message, session):
             error_msg = texts.ERROR_GENERIC
             error_kind = "generic"
         await log_event(session, user, IMAGE_GENERATION_FAILED, {"error": error_kind})
+        await send_error_report(
+            message.bot,
+            user_id=message.from_user.id,
+            username=message.from_user.username,
+            tier=user.tier,
+            model=TIER_MODELS.get(user.tier, user.tier),
+            operation="generate",
+            prompt=message.text or "",
+            error=f"{type(e).__name__}: {error_text}",
+            size=f"{width}x{height}",
+        )
         try:
             await gen_msg.edit_text(badge(error_msg))
         except Exception:

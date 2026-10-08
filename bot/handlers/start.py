@@ -1,11 +1,9 @@
 from aiogram import Router, F
-from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from bot.services.user import get_or_create_user, check_and_reset_daily
 from bot.services.analytics import ensure_user_started
 from bot.keyboards.reply import main_menu
 from bot.keyboards.inline import force_join
-from bot.handlers.settings import ResolutionState
 from bot.texts import badge
 import bot.texts as texts
 from bot.config import settings
@@ -14,9 +12,7 @@ router = Router()
 
 
 @router.message(F.text == "/start")
-async def cmd_start(message: Message, session, state: FSMContext):
-    if await state.get_state() == ResolutionState.waiting:
-        return
+async def cmd_start(message: Message, session):
     user = await get_or_create_user(session, message.from_user.id)
     await check_and_reset_daily(session, user)
     await ensure_user_started(session, user)

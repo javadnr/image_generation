@@ -97,17 +97,6 @@ async def set_tier(session: AsyncSession, telegram_id: int, tier: str) -> User |
     return user
 
 
-async def set_resolution(session: AsyncSession, user: User, width: int, height: int) -> None:
-    user.image_width = width
-    user.image_height = height
-    await session.commit()
-
-
-async def toggle_optimize(session: AsyncSession, user: User) -> None:
-    user.optimize_prompt = not user.optimize_prompt
-    await session.commit()
-
-
 async def set_generating(session: AsyncSession, user: User, value: bool) -> None:
     user.is_generating = value
     await session.commit()

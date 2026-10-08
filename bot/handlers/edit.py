@@ -10,7 +10,8 @@ from bot.services.analytics import (
     IMAGE_GENERATION_STARTED, IMAGE_GENERATION_SUCCESS, IMAGE_GENERATION_FAILED,
 )
 from bot.services.queue import acquire_queue, release_queue
-from bot.services.image import edit_image
+from bot.services.image import edit_image, TIER_MODELS
+from bot.services.report import send_error_report
 from bot.keyboards.reply import main_menu
 from bot.texts import badge
 import bot.texts as texts
@@ -62,12 +63,12 @@ async def handle_edit(message: Message, session):
     await maybe_log_first_generation_start(session, user)
     await log_event(session, user, IMAGE_GENERATION_STARTED)
 
+    width = user.image_width if user.tier != "free" else 1024
+    height = user.image_height if user.tier != "free" else 1024
+
     try:
         await set_generating(session, user, True)
         gen_msg = await message.answer(badge("درحال ساخت...."))
-
-        width = user.image_width if user.tier != "free" else 1024
-        height = user.image_height if user.tier != "free" else 1024
 
         image_bytes = await edit_image(img.file_path, message.text, user.tier, width, height)
 
@@ -114,6 +115,17 @@ async def handle_edit(message: Message, session):
             error_msg = texts.ERROR_GENERIC
             error_kind = "generic"
         await log_event(session, user, IMAGE_GENERATION_FAILED, {"error": error_kind})
+        await send_error_report(
+            message.bot,
+            user_id=message.from_user.id,
+            username=message.from_user.username,
+            tier=user.tier,
+            model=TIER_MODELS.get(user.tier, user.tier),
+            operation="edit",
+            prompt=message.text or "",
+            error=f"{type(e).__name__}: {error_text}",
+            size=f"{width}x{height}",
+        )
         try:
             await gen_msg.edit_text(badge(error_msg))
         except Exception:
@@ -152,6 +164,9 @@ async def handle_photo_edit(message: Message, session, bot):
     await maybe_log_first_generation_start(session, user)
     await log_event(session, user, IMAGE_GENERATION_STARTED)
 
+    width = user.image_width if user.tier != "free" else 1024
+    height = user.image_height if user.tier != "free" else 1024
+
     try:
         await set_generating(session, user, True)
         gen_msg = await message.answer(badge("درحال ویرایش تصویر...."))
@@ -160,9 +175,6 @@ async def handle_photo_edit(message: Message, session, bot):
         file = await bot.get_file(photo.file_id)
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
         await bot.download_file(file.file_path, tmp.name)
-
-        width = user.image_width if user.tier != "free" else 1024
-        height = user.image_height if user.tier != "free" else 1024
 
         image_bytes = await edit_image(tmp.name, prompt, user.tier, width, height)
 
@@ -210,6 +222,17 @@ async def handle_photo_edit(message: Message, session, bot):
             error_msg = texts.ERROR_GENERIC
             error_kind = "generic"
         await log_event(session, user, IMAGE_GENERATION_FAILED, {"error": error_kind})
+        await send_error_report(
+            message.bot,
+            user_id=message.from_user.id,
+            username=message.from_user.username,
+            tier=user.tier,
+            model=TIER_MODELS.get(user.tier, user.tier),
+            operation="photo_edit",
+            prompt=prompt or "",
+            error=f"{type(e).__name__}: {error_text}",
+            size=f"{width}x{height}",
+        )
         try:
             await gen_msg.edit_text(badge(error_msg))
         except Exception:

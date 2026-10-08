@@ -173,15 +173,12 @@ async def handle_check_payment(callback: CallbackQuery, session):
         )
         await callback.message.edit_text(badge(text))
 
-        from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
-        buttons = [
-            [KeyboardButton(text=texts.MAIN_MENU_GENERATE), KeyboardButton(text=texts.MAIN_MENU_BALANCE)],
-            [KeyboardButton(text=texts.MAIN_MENU_PREMIUM), KeyboardButton(text=texts.MAIN_MENU_SETTINGS)],
-        ]
-        await callback.message.answer(
-            badge(texts.WELCOME),
-            reply_markup=ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True),
-        )
+        async with async_session() as fresh_session:
+            fresh_user = await get_or_create_user(fresh_session, callback.from_user.id)
+            await callback.message.answer(
+                badge(texts.WELCOME),
+                reply_markup=main_menu(fresh_user),
+            )
 
         await send_premium_report(
             callback.bot,

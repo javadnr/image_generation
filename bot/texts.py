@@ -10,7 +10,6 @@ WELCOME = "🎨 به ربات تولید تصویر با هوش مصنوعی خ�
 MAIN_MENU_GENERATE = "🎨 ساخت تصویر"
 MAIN_MENU_BALANCE = "📊 موجودی"
 MAIN_MENU_PREMIUM = "💎 خرید اشتراک"
-MAIN_MENU_SETTINGS = "⚙️ تنظیمات"
 MAIN_MENU_ADMIN = "📊 وضعیت ربات"
 
 TIER_NAMES_FA = {"bronze": "برنزی", "silver": "نقره‌ای", "gold": "طلایی"}
@@ -28,23 +27,6 @@ PREMIUM_BRONZE = "🥉 برنزی — {price} تومان\n۱۰ تصویر در �
 PREMIUM_SILVER = "🥈 نقره‌ای — {price} تومان\n۲۵ تصویر در روز"
 PREMIUM_GOLD = "🥇 طلایی — {price} تومان\n۵۰ تصویر در روز"
 PREMIUM_CURRENT = "📦 پلن فعلی شما: {tier}"
-PREMIUM_SETTINGS = "⚙️ تنظیمات"
-
-# Settings
-SETTINGS_TITLE = "⚙️ تنظیمات پریمیوم"
-SETTINGS_RESOLUTION = "🖼 رزولوشن: {width}×{height}"
-SETTINGS_OPTIMIZE = "✨ بهینه‌سازی پرامپت: {status}"
-SETTINGS_OPTIMIZE_ON = "فعال"
-SETTINGS_OPTIMIZE_OFF = "غیرفعال"
-SETTINGS_BACK = "🔙 بازگشت"
-
-RESOLUTION_TITLE = "🖼 رزولوشن تصویر را انتخاب کنید:"
-RESOLUTION_CUSTOM = "🔄 رزولوشن سفارشی"
-RESOLUTION_CUSTOM_PROMPT = "رزولوشن دلخواه را به صورت عرض×ارتفاع ارسال کنید.\nمثال: 768×512\n\nیا روی لغو بزنید:"
-RESOLUTION_CANCEL = "❌ لغو"
-RESOLUTION_INVALID = "⚠️ رزولوشن نامعتبر.\nمقادیر باید مضربی از ۶۴ و نسبت بزرگتر به کوچکتر حداکثر ۱۶:۹ باشند.\nمثال صحیح: 768×512"
-RESOLUTION_SET = "✅ رزولوشن به {width}×{height} تغییر کرد."
-
 # Balance
 BALANCE_TITLE = "📊 موجودی شما\n\nremain از total تصویر در روز"
 
