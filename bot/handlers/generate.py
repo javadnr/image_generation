@@ -14,6 +14,7 @@ from bot.services.queue import acquire_queue, release_queue
 from bot.services.image import generate_image, TIER_MODELS
 from bot.services.report import send_error_report, send_processed_report
 from bot.keyboards.reply import main_menu
+from bot.keyboards.inline import plans_button
 from bot.texts import badge
 import bot.texts as texts
 
@@ -115,6 +116,18 @@ async def handle_generate(message: Message, session):
         await consume_quota(session, user)
         await save_image(session, user, sent_msg_id, file_path, message.text)
         await log_event(session, user, IMAGE_GENERATION_SUCCESS)
+        if user.tier == "free":
+            remaining = await get_remaining(session, user)
+            if remaining == 1:
+                await message.answer(
+                    badge("🎁 فقط ۱ فرصت رایگان باقی مانده!"),
+                    reply_markup=plans_button(),
+                )
+            elif remaining == 0:
+                await message.answer(
+                    badge("⚠️ اعتبار رایگان شما تمام شد!\nبرای ادامه ساخت تصویر، اشتراک تهیه کنید 👇"),
+                    reply_markup=plans_button(),
+                )
         await send_processed_report(
             message.bot,
             user_id=message.from_user.id,

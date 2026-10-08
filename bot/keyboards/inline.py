@@ -39,6 +39,12 @@ def premium_menu(user) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
+def plans_button() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💎 مشاهده پلن‌ها", callback_data="show_plans")],
+    ])
+
+
 def admin_status(bot_enabled: bool) -> InlineKeyboardMarkup:
     toggle_text = "🔴 غیرفعال کردن ربات" if bot_enabled else "🟢 فعال کردن ربات"
     return InlineKeyboardMarkup(inline_keyboard=[

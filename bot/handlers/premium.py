@@ -88,6 +88,13 @@ async def premium(message: Message, session):
     await message.answer(premium_text(user), reply_markup=premium_menu(user))
 
 
+@router.callback_query(F.data == "show_plans")
+async def show_plans(callback: CallbackQuery, session):
+    user = await get_or_create_user(session, callback.from_user.id)
+    await callback.message.answer(premium_text(user), reply_markup=premium_menu(user))
+    await callback.answer()
+
+
 @router.callback_query(F.data.startswith("buy_"))
 async def buy_tier(callback: CallbackQuery, session):
     tier = callback.data.replace("buy_", "")
