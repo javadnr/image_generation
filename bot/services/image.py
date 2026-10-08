@@ -12,7 +12,10 @@ TIER_MODELS = {
     "gold": settings.GOLD_MODEL,
 }
 
-client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+client = AsyncOpenAI(
+    api_key=settings.OPENAI_API_KEY,
+    base_url=settings.OPENAI_BASE_URL or None,
+)
 
 
 async def generate_image(prompt: str, tier: str, width: int = 1024, height: int = 1024) -> bytes:

@@ -6,6 +6,7 @@ from pydantic import validator
 class Settings(BaseSettings):
     BOT_TOKEN: str
     OPENAI_API_KEY: str
+    OPENAI_BASE_URL: str = ""
     ADMIN_IDS: list[int] = []
     DB_PASSWORD: str = "changeme"
     DATABASE_URL: str = "postgresql+asyncpg://bot:changeme@postgres:5432/imagebot"
