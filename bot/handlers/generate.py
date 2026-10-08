@@ -68,7 +68,7 @@ async def handle_generate(message: Message, session):
         return
 
     if not await acquire_queue(user.tier, user.telegram_id):
-        await message.answer(badge("⏳ صف پر است. لطفاً صبر کنید..."))
+        await message.answer(badge("⏳ لطفاً کمی صبر کنید و دوباره تلاش کنید..."))
         return
 
     await maybe_log_first_generation_start(session, user)

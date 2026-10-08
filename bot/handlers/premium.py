@@ -52,28 +52,20 @@ def premium_text(user) -> str:
     silver_max = settings.SILVER_MAX_LIMIT
     gold_max = settings.GOLD_MAX_LIMIT
 
-    bronze_q = settings.BRONZE_QUEUE_SIZE or "∞"
-    silver_q = settings.SILVER_QUEUE_SIZE or "∞"
-    gold_q = "∞"
-
     return badge(
         f"💎 پلن‌های پریمیوم\n\n"
-        f"با خرید پریمیوم، محدودیت تولید تصویرت رو بیشتر کن و با اولویت بالاتر عکس بساز! 🚀\n\n"
+        f"با خرید پریمیوم، محدودیت تولید تصویرت رو بیشتر کن! 🚀\n\n"
         f"🥉 برنزی — {tooman_display(settings.BRONZE_PRICE)}\n"
         f"• روزانه تا {bronze_daily} تصویر\n"
-        f"• حداکثر {bronze_max} تصویر\n"
-        f"• صف پردازش تا {bronze_q} کاربر همزمان\n\n"
+        f"• حداکثر {bronze_max} تصویر\n\n"
         f"🥈 نقره‌ای — {tooman_display(settings.SILVER_PRICE)} ⭐ محبوب‌ترین\n"
         f"• روزانه تا {silver_daily} تصویر\n"
-        f"• حداکثر {silver_max} تصویر\n"
-        f"• صف پردازش تا {silver_q} کاربر همزمان\n\n"
+        f"• حداکثر {silver_max} تصویر\n\n"
         f"🥇 طلایی — {tooman_display(settings.GOLD_PRICE)} 🔥 بیشترین اعتبار\n"
         f"• روزانه تا {gold_daily} تصویر\n"
-        f"• حداکثر {gold_max} تصویر\n"
-        f"• بدون صف پردازش ⚡️\n\n"
+        f"• حداکثر {gold_max} تصویر\n\n"
         f"🆓 پلن رایگان\n"
-        f"• {get_tier_limit('free')} تصویر رایگان (یک‌بار مصرف)\n"
-        f"• صف پردازش تا {settings.FREE_QUEUE_SIZE} کاربر همزمان\n\n"
+        f"• {get_tier_limit('free')} تصویر رایگان (یک‌بار مصرف)\n\n"
         f"💡 همه تصاویر با مدل‌های پیشرفته OpenAI تولید می‌شوند.\n\n"
         f"👇 پلن موردنظرت رو انتخاب کن:"
     )
