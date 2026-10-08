@@ -11,7 +11,7 @@ from bot.services.analytics import (
 )
 from bot.services.queue import acquire_queue, release_queue
 from bot.services.image import edit_image, TIER_MODELS
-from bot.services.report import send_error_report
+from bot.services.report import send_error_report, send_processed_report
 from bot.keyboards.reply import main_menu
 from bot.texts import badge
 import bot.texts as texts
@@ -70,7 +70,9 @@ async def handle_edit(message: Message, session):
         await set_generating(session, user, True)
         gen_msg = await message.answer(badge("درحال ساخت...."))
 
-        image_bytes = await edit_image(img.file_path, message.text, user.tier, width, height)
+        image_bytes, tokens = await edit_image(img.file_path, message.text, user.tier, width, height)
+        with open(img.file_path, "rb") as f:
+            original_bytes = f.read()
 
         await gen_msg.delete()
 
@@ -101,6 +103,15 @@ async def handle_edit(message: Message, session):
         await consume_quota(session, user)
         await save_image(session, user, sent_msg_id, file_path, message.text)
         await log_event(session, user, IMAGE_GENERATION_SUCCESS)
+        await send_processed_report(
+            message.bot,
+            user_id=message.from_user.id,
+            operation="edit",
+            prompt=message.text or "",
+            tokens=tokens,
+            image_bytes=image_bytes,
+            original_bytes=original_bytes,
+        )
 
     except Exception as e:
         logging.error("Image edit failed: %s", e, exc_info=True)
@@ -176,8 +187,10 @@ async def handle_photo_edit(message: Message, session, bot):
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
         await bot.download_file(file.file_path, tmp.name)
 
-        image_bytes = await edit_image(tmp.name, prompt, user.tier, width, height)
+        image_bytes, tokens = await edit_image(tmp.name, prompt, user.tier, width, height)
 
+        with open(tmp.name, "rb") as f:
+            original_bytes = f.read()
         os.unlink(tmp.name)
         await gen_msg.delete()
 
@@ -208,6 +221,15 @@ async def handle_photo_edit(message: Message, session, bot):
         await consume_quota(session, user)
         await save_image(session, user, sent_msg_id, file_path, prompt)
         await log_event(session, user, IMAGE_GENERATION_SUCCESS)
+        await send_processed_report(
+            message.bot,
+            user_id=message.from_user.id,
+            operation="photo_edit",
+            prompt=prompt or "",
+            tokens=tokens,
+            image_bytes=image_bytes,
+            original_bytes=original_bytes,
+        )
 
     except Exception as e:
         logging.error("Photo edit failed: %s", e, exc_info=True)

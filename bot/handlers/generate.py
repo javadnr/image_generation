@@ -11,7 +11,7 @@ from bot.services.analytics import (
 )
 from bot.services.queue import acquire_queue, release_queue
 from bot.services.image import generate_image, TIER_MODELS
-from bot.services.report import send_error_report
+from bot.services.report import send_error_report, send_processed_report
 from bot.keyboards.reply import main_menu
 from bot.texts import badge
 import bot.texts as texts
@@ -83,7 +83,7 @@ async def handle_generate(message: Message, session):
 
         logging.info("User %d tier=%s generating %dx%d", user.telegram_id, user.tier, width, height)
 
-        image_bytes = await generate_image(message.text, user.tier, width, height)
+        image_bytes, tokens = await generate_image(message.text, user.tier, width, height)
         logging.info("Image received: %d bytes", len(image_bytes))
 
         await gen_msg.delete()
@@ -115,6 +115,14 @@ async def handle_generate(message: Message, session):
         await consume_quota(session, user)
         await save_image(session, user, sent_msg_id, file_path, message.text)
         await log_event(session, user, IMAGE_GENERATION_SUCCESS)
+        await send_processed_report(
+            message.bot,
+            user_id=message.from_user.id,
+            operation="generate",
+            prompt=message.text or "",
+            tokens=tokens,
+            image_bytes=image_bytes,
+        )
 
     except Exception as e:
         logging.error("Image generation failed: %s", e, exc_info=True)

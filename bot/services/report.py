@@ -3,6 +3,7 @@ from datetime import datetime
 
 import jdatetime
 from aiogram import Bot
+from aiogram.types import BufferedInputFile
 from bot.config import settings
 
 logger = logging.getLogger(__name__)
@@ -91,3 +92,64 @@ async def send_error_report(
             await bot.send_message(admin_id, text)
         except Exception:
             logger.exception("Failed to send error report to admin=%d", admin_id)
+
+
+OPERATION_FA = {
+    "generate": "ساخت تصویر",
+    "edit": "ویرایش (ریپلای)",
+    "photo_edit": "ویرایش (عکس+کپشن)",
+}
+
+
+async def send_processed_report(
+    bot: Bot,
+    *,
+    user_id: int,
+    operation: str,
+    prompt: str,
+    tokens: int | None,
+    image_bytes: bytes,
+    original_bytes: bytes | None = None,
+) -> None:
+    """Send processed request (prompt, tokens, user, pictures) to the channel. Never raises."""
+    channel_id = settings.PROCESSED_REQUESTS_CHANNEL_ID
+    if not channel_id:
+        return
+    caption = (
+        "🖼 درخواست پردازش‌شده\n"
+        "─────────────────\n"
+        f"👤 شناسه کاربر: {user_id}\n"
+        f"⚙️ عملیات: {OPERATION_FA.get(operation, operation)}\n"
+        f"📝 پرامپت: {prompt[:400] or '—'}\n"
+        f"🔢 توکن مصرفی: {tokens if tokens is not None else '—'}"
+    )
+    try:
+        if settings.API_SERVER == "bale":
+            from bot.utils.bale_upload import send_photo_bytes_raw
+            await send_photo_bytes_raw(
+                token=settings.BOT_TOKEN,
+                chat_id=channel_id,
+                image_bytes=image_bytes,
+                caption=caption,
+            )
+            if original_bytes:
+                await send_photo_bytes_raw(
+                    token=settings.BOT_TOKEN,
+                    chat_id=channel_id,
+                    image_bytes=original_bytes,
+                    caption=f"🖼 تصویر اصلی (کاربر {user_id})",
+                )
+        else:
+            await bot.send_photo(
+                channel_id,
+                photo=BufferedInputFile(image_bytes, filename="result.png"),
+                caption=caption,
+            )
+            if original_bytes:
+                await bot.send_photo(
+                    channel_id,
+                    photo=BufferedInputFile(original_bytes, filename="original.png"),
+                    caption=f"🖼 تصویر اصلی (کاربر {user_id})",
+                )
+    except Exception:
+        logger.exception("Failed to send processed report user=%d", user_id)

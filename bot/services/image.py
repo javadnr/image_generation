@@ -32,7 +32,13 @@ async def _extract_image_bytes(img) -> bytes:
     raise ValueError("Image response contained neither b64_json nor url")
 
 
-async def generate_image(prompt: str, tier: str, width: int = 1024, height: int = 1024) -> bytes:
+def _extract_tokens(result) -> int | None:
+    usage = getattr(result, "usage", None)
+    tokens = usage.get("total_tokens") if isinstance(usage, dict) else usage
+    return tokens if isinstance(tokens, int) else None
+
+
+async def generate_image(prompt: str, tier: str, width: int = 1024, height: int = 1024) -> tuple[bytes, int | None]:
     model = TIER_MODELS[tier]
     log.info("Generating image: model=%s size=%dx%d prompt=%s", model, width, height, prompt[:80])
     result = await client.images.generate(
@@ -42,15 +48,15 @@ async def generate_image(prompt: str, tier: str, width: int = 1024, height: int 
         n=1,
     )
     img = result.data[0]
-    usage = getattr(result, "usage", None)
+    tokens = _extract_tokens(result)
     log.info(
         "Image generated: model=%s size=%dx%d tokens=%s",
-        model, width, height, usage.get("total_tokens") if isinstance(usage, dict) else usage,
+        model, width, height, tokens,
     )
-    return await _extract_image_bytes(img)
+    return await _extract_image_bytes(img), tokens
 
 
-async def edit_image(file_path: str, prompt: str, tier: str, width: int = 1024, height: int = 1024) -> bytes:
+async def edit_image(file_path: str, prompt: str, tier: str, width: int = 1024, height: int = 1024) -> tuple[bytes, int | None]:
     model = TIER_MODELS[tier]
     log.info("Editing image: model=%s size=%dx%d file=%s prompt=%s", model, width, height, file_path, prompt[:80])
     with open(file_path, "rb") as f:
@@ -61,9 +67,9 @@ async def edit_image(file_path: str, prompt: str, tier: str, width: int = 1024, 
             size=f"{width}x{height}",
         )
     img = result.data[0]
-    usage = getattr(result, "usage", None)
+    tokens = _extract_tokens(result)
     log.info(
         "Image edited: model=%s size=%dx%d tokens=%s",
-        model, width, height, usage.get("total_tokens") if isinstance(usage, dict) else usage,
+        model, width, height, tokens,
     )
-    return await _extract_image_bytes(img)
+    return await _extract_image_bytes(img), tokens

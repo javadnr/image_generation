@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     SILVER_PRICE: int = 800000
     GOLD_PRICE: int = 1400000
     REPORT_CHANNEL_ID: int | None = None
+    PROCESSED_REQUESTS_CHANNEL_ID: int | None = None
     REQUIRED_CHANNELS: dict[str, str] = {}
     BADGE: str = "@kiteck_TM"
     ZARINPAL_API_URL: str = ""
@@ -49,6 +50,12 @@ class Settings(BaseSettings):
 
     @validator("REPORT_CHANNEL_ID", pre=True)
     def parse_report_channel(cls, v):
+        if isinstance(v, str) and v.strip() == "":
+            return None
+        return v
+
+    @validator("PROCESSED_REQUESTS_CHANNEL_ID", pre=True)
+    def parse_processed_channel(cls, v):
         if isinstance(v, str) and v.strip() == "":
             return None
         return v
