@@ -1,5 +1,6 @@
 import base64
 import logging
+import httpx
 from openai import AsyncOpenAI
 from bot.config import settings
 
@@ -18,6 +19,19 @@ client = AsyncOpenAI(
 )
 
 
+async def _extract_image_bytes(img) -> bytes:
+    """Compatible endpoints may return b64_json or a url — handle both."""
+    if getattr(img, "b64_json", None):
+        return base64.b64decode(img.b64_json)
+    if getattr(img, "url", None):
+        log.info("Downloading image from url: %s", img.url[:80])
+        async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as http:
+            resp = await http.get(img.url)
+            resp.raise_for_status()
+            return resp.content
+    raise ValueError("Image response contained neither b64_json nor url")
+
+
 async def generate_image(prompt: str, tier: str, width: int = 1024, height: int = 1024) -> bytes:
     model = TIER_MODELS[tier]
     log.info("Generating image: model=%s size=%dx%d prompt=%s", model, width, height, prompt[:80])
@@ -33,7 +47,7 @@ async def generate_image(prompt: str, tier: str, width: int = 1024, height: int 
         "Image generated: model=%s size=%dx%d tokens=%s",
         model, width, height, usage.get("total_tokens") if isinstance(usage, dict) else usage,
     )
-    return base64.b64decode(img.b64_json)
+    return await _extract_image_bytes(img)
 
 
 async def edit_image(file_path: str, prompt: str, tier: str, width: int = 1024, height: int = 1024) -> bytes:
@@ -52,4 +66,4 @@ async def edit_image(file_path: str, prompt: str, tier: str, width: int = 1024, 
         "Image edited: model=%s size=%dx%d tokens=%s",
         model, width, height, usage.get("total_tokens") if isinstance(usage, dict) else usage,
     )
-    return base64.b64decode(img.b64_json)
+    return await _extract_image_bytes(img)
