@@ -81,3 +81,6 @@ USER_DEACTIVATED = "📦 اشتراک شما به پایان رسید و به پ
 ADMIN_ACTIVATED = "✅ پریمیوم {tier} برای کاربر {user_id} فعال شد."
 ADMIN_INVALID_TIER = "⚠️ پلن نامعتبر. tiers: free, bronze, silver, gold"
 ADMIN_REPORT = "💎 اکانت پریمیوم فعال شد\n👤 کاربر: {user_id}\n📦 پلن: {tier}\n💰 قیمت: {price} تومان"
+ADMIN_BROADCAST_USAGE = "استفاده:\n/broadcast متن پیام\nیا روی یک پیام ریپلای کنید و بنویسید:\n/broadcast"
+ADMIN_BROADCAST_STARTED = "⏳ ارسال همگانی شروع شد..."
+ADMIN_BROADCAST_DONE = "✅ ارسال همگانی تمام شد\n✔️ موفق: {ok}\n❌ ناموفق: {fail}"

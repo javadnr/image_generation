@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from aiogram import Router, F
@@ -242,6 +243,53 @@ async def deactivate_cmd(message: Message, session):
     except Exception:
         logger.exception("Failed to notify user %d about deactivation", user_id)
         await message.answer(badge("⚠️ غیرفعال‌سازی انجام شد اما اطلاع‌رسانی به کاربر ممکن نشد (ربات بلاک شده؟)."))
+
+
+@router.message(F.text.startswith("/broadcast"))
+async def broadcast_cmd(message: Message, session):
+    if message.from_user.id not in settings.ADMIN_IDS:
+        return
+
+    reply = message.reply_to_message
+    text = message.text[len("/broadcast"):].strip()
+
+    if reply is None and not text:
+        await message.answer(badge(texts.ADMIN_BROADCAST_USAGE))
+        return
+
+    result = await session.execute(select(User.telegram_id))
+    user_ids = list(result.scalars().all())
+    if not user_ids:
+        await message.answer(badge("⚠️ کاربری برای ارسال وجود ندارد."))
+        return
+
+    await message.answer(badge(texts.ADMIN_BROADCAST_STARTED))
+
+    bot = message.bot
+    admin_chat_id = message.chat.id
+
+    async def _run():
+        ok = fail = 0
+        for uid in user_ids:
+            try:
+                if reply is not None:
+                    await bot.copy_message(uid, message.chat.id, reply.message_id)
+                else:
+                    await bot.send_message(uid, badge(text))
+                ok += 1
+            except Exception:
+                logger.exception("Broadcast failed for user %d", uid)
+                fail += 1
+            await asyncio.sleep(0.05)
+        try:
+            await bot.send_message(
+                admin_chat_id,
+                badge(texts.ADMIN_BROADCAST_DONE.format(ok=ok, fail=fail)),
+            )
+        except Exception:
+            logger.exception("Failed to send broadcast summary")
+
+    asyncio.create_task(_run())
 
 
 @router.message(F.text.startswith("/stats"))
