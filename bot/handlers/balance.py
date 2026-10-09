@@ -2,6 +2,7 @@ from aiogram import Router, F
 from aiogram.types import Message
 from bot.services.user import get_or_create_user, check_and_reset_daily, get_remaining, get_total_remaining, get_tier_limit
 from bot.keyboards.reply import main_menu
+from bot.keyboards.inline import plans_button
 from bot.texts import badge
 import bot.texts as texts
 
@@ -33,4 +34,8 @@ async def balance(message: Message, session):
             daily_limit=daily_limit,
         )
 
-    await message.answer(badge(text), reply_markup=main_menu(user))
+    if daily_remaining == 0 or (total_remaining is not None and total_remaining == 0):
+        text += "\n\n💎 برای ساخت تصاویر بیشتر، اشتراک تهیه کنید 👇"
+        await message.answer(badge(text), reply_markup=plans_button())
+    else:
+        await message.answer(badge(text), reply_markup=main_menu(user))
