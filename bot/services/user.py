@@ -151,12 +151,11 @@ async def get_tier_images_today(session: AsyncSession, tier: str) -> int:
     return result.scalar()
 
 
-async def reset_all_daily(session: AsyncSession) -> None:
-    await session.execute(
-        update(User)
-        .where(User.tier != "free")
-        .values(daily_used=0, last_reset_date=today_in_tehran())
-    )
+async def reset_all_daily(session: AsyncSession, include_free: bool = False) -> None:
+    stmt = update(User).values(daily_used=0, last_reset_date=today_in_tehran())
+    if not include_free:
+        stmt = stmt.where(User.tier != "free")
+    await session.execute(stmt)
     await session.commit()
 
 

@@ -141,7 +141,7 @@ async def reset_daily_handler(callback: CallbackQuery, session):
         await callback.answer("⛔ دسترسی ندارید.", show_alert=True)
         return
 
-    await reset_all_daily(session)
+    await reset_all_daily(session, include_free=True)
     await callback.answer(texts.ADMIN_RESET_DONE)
 
 

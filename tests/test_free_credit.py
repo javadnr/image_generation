@@ -93,3 +93,18 @@ async def test_reset_all_daily_skips_free(db):
     await db.refresh(prem)
     assert free.daily_used == 2
     assert prem.daily_used == 0
+
+
+@pytest.mark.asyncio
+async def test_reset_all_daily_include_free(db):
+    yesterday = date.today() - timedelta(days=1)
+    free = await _make_user(db, 806, tier="free", daily_used=2, last_reset=yesterday)
+    prem = await _make_user(db, 807, tier="silver", daily_used=25, last_reset=yesterday)
+    await db.commit()
+
+    await user_svc.reset_all_daily(db, include_free=True)
+
+    await db.refresh(free)
+    await db.refresh(prem)
+    assert free.daily_used == 0
+    assert prem.daily_used == 0
