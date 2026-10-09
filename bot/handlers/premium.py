@@ -56,7 +56,7 @@ def premium_text(user) -> str:
         f"💎 پلن‌های پریمیوم\n\n"
         f"با خرید پریمیوم، محدودیت تولید تصویرت رو بیشتر کن! 🚀\n\n"
         f"🆓 پلن رایگان\n"
-        f"• {get_tier_limit('free')} تصویر رایگان (یک‌بار مصرف)\n\n"
+        f"• {get_tier_limit('free')} تصویر رایگان\n\n"
         f"🥉 برنزی — {tooman_display(settings.BRONZE_PRICE)}\n"
         f"• روزانه تا {bronze_daily} تصویر\n"
         f"• حداکثر {bronze_max} تصویر\n\n"

@@ -20,7 +20,7 @@ QUOTA_EXCEEDED = "⚠️ سقف روزانه شما تمام شده.\nبرای �
 LIMIT_REACHED_BUY = "⚠️ سقف استفاده شما تمام شده است.\nبرای ساخت تصاویر بیشتر باید اشتراک تهیه کنید 👇"
 QUOTA_EXCEEDED_MAX = "⚠️ سقف کل اشتراک شما تمام شده.\nبه پلن رایگان بازگشتید."
 QUOTA_REMAINING = "📊 موجودی شما\n\n📦 پلن: {tier}\n🖼 روزانه: {daily_remaining} از {daily_limit}\n🖼 کل: {total_remaining} از {max_limit}"
-QUOTA_REMAINING_FREE = "📊 موجودی شما\n\n📦 پلن: رایگان\n🖼 اعتبار باقی‌مانده: {daily_remaining} از {daily_limit} (یک‌بار مصرف)"
+QUOTA_REMAINING_FREE = "📊 موجودی شما\n\n📦 پلن: رایگان\n🖼 اعتبار باقی‌مانده: {daily_remaining} از {daily_limit}"
 
 # Premium
 PREMIUM_TITLE = "💎 اشتراک پریمیوم"
