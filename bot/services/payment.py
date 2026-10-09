@@ -69,6 +69,14 @@ async def activate_plan(session: AsyncSession, user: User, plan: str) -> None:
     await session.commit()
 
 
+async def deactivate_plan(session: AsyncSession, user: User) -> None:
+    user.tier = "free"
+    user.premium_expire_date = None
+    user.daily_used = 0
+    user.total_used = 0
+    await session.commit()
+
+
 async def create_zarinpal_purchase(session: AsyncSession, user: User, plan: str) -> dict:
     existing, remaining = await _find_pending_tx(session, user.id, plan)
     if existing and existing.payment_authority:

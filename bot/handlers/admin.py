@@ -8,7 +8,7 @@ from bot.services.user import (
     get_tier_users_count, get_tier_images_today, reset_all_daily, set_tier,
 )
 from bot.services import analytics as az
-from bot.services.payment import activate_plan, PLAN_LIMITS, PLAN_MAX_LIMITS
+from bot.services.payment import activate_plan, deactivate_plan, PLAN_LIMITS, PLAN_MAX_LIMITS
 from bot.keyboards.inline import admin_status
 from bot.keyboards.reply import main_menu
 from bot.db.engine import async_session
@@ -228,6 +228,42 @@ async def activate_cmd(message: Message, session):
     except Exception:
         logger.exception("Failed to notify user %d about activation", user_id)
         await message.answer(badge("⚠️ فعال‌سازی انجام شد اما اطلاع‌رسانی به کاربر ممکن نشد (ربات بلاک شده؟)."))
+
+
+@router.message(F.text.startswith("/deactivate"))
+async def deactivate_cmd(message: Message, session):
+    if message.from_user.id not in settings.ADMIN_IDS:
+        return
+
+    parts = message.text.split()
+    if len(parts) != 2:
+        await message.answer(badge(texts.ADMIN_DEACTIVATE_USAGE))
+        return
+
+    try:
+        user_id = int(parts[1])
+    except ValueError:
+        await message.answer(badge(texts.ADMIN_DEACTIVATE_USAGE))
+        return
+
+    result = await session.execute(select(User).where(User.telegram_id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        await message.answer(badge(f"⚠️ کاربر با ID {user_id} یافت نشد."))
+        return
+
+    await deactivate_plan(session, user)
+    await message.answer(badge(texts.ADMIN_DEACTIVATED.format(user_id=user_id)))
+
+    try:
+        await message.bot.send_message(
+            user_id,
+            badge(texts.USER_DEACTIVATED),
+            reply_markup=main_menu(user),
+        )
+    except Exception:
+        logger.exception("Failed to notify user %d about deactivation", user_id)
+        await message.answer(badge("⚠️ غیرفعال‌سازی انجام شد اما اطلاع‌رسانی به کاربر ممکن نشد (ربات بلاک شده؟)."))
 
 
 @router.message(F.text.startswith("/stats"))
