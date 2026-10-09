@@ -54,7 +54,8 @@ def premium_text(user) -> str:
 
     return badge(
         f"💎 پلن‌های پریمیوم\n\n"
-        f"با خرید پریمیوم، تصاویر با کیفیت تر بساز! 🚀\n\n"
+        f"با خرید پریمیوم، تصاویر با کیفیت تر بساز! 🚀\n"
+        f"📅 همه پلن‌ها ماهانه هستند.\n\n"
         f"🆓 پلن رایگان\n"
         f"• {get_tier_limit('free')} تصویر رایگان\n\n"
         f"🥉 برنزی — {tooman_display(settings.BRONZE_PRICE)}\n"
