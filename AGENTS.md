@@ -28,19 +28,16 @@ bot/
 ### Image Generation
 1. User sends text → middleware checks: private chat, bot enabled, force-join
 2. Handler checks: quota available, user not already generating
-3. Acquire tier semaphore → call OpenAI API → send photo → save to disk → consume quota
+3. Acquire tier semaphore → call OpenAI API → send photo → consume quota (no disk saving)
 4. On error: show Persian error, do NOT consume quota
 
-### Image Edit
-User replies to bot's photo with text → handler checks disk has image → call OpenAI edit API
-
 ### Daily Reset
-APScheduler cron at Iran midnight (IRST). Resets `daily_used` for all users.
+APScheduler cron at Iran midnight (IRST). Resets `daily_used` for premium users only (free credit is one-time).
 
 ## DB Schema
 
 - `users`: telegram_id, tier, daily_used, last_reset_date, is_generating, image_width, image_height, optimize_prompt
-- `generated_images`: user_id, message_id, file_path, prompt
+- `generated_images`: legacy table, no longer written (kept for historical analytics)
 - `bot_settings`: single row, bot_enabled flag
 
 ## Environment Variables

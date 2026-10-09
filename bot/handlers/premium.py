@@ -72,12 +72,13 @@ def premium_text(user) -> str:
 
 
 async def answer_quota_exceeded(message: Message, session, user) -> None:
-    """Free users with spent one-time credit get the premium plans message."""
+    """Tell the user they must buy for more, then show the plans."""
     await maybe_log_free_limit(session, user)
     if user.tier == "free":
-        await message.answer(premium_text(user), reply_markup=premium_menu(user))
+        await message.answer(badge(texts.LIMIT_REACHED_BUY))
     else:
         await message.answer(badge(texts.QUOTA_EXCEEDED))
+    await message.answer(premium_text(user), reply_markup=premium_menu(user))
 
 
 @router.message(F.text == texts.MAIN_MENU_PREMIUM)

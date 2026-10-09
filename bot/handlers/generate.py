@@ -1,9 +1,8 @@
-import os
 import logging
 from aiogram import Router, F
 from aiogram.types import Message, BufferedInputFile
 from bot.config import settings
-from bot.services.user import get_or_create_user, check_and_reset_daily, can_generate, consume_quota, set_generating, save_image, get_tier_limit, get_remaining, check_max_limit
+from bot.services.user import get_or_create_user, check_and_reset_daily, can_generate, consume_quota, set_generating, get_tier_limit, get_remaining, check_max_limit
 from bot.services.analytics import (
     log_event, maybe_log_first_generation_start,
     IMAGE_GENERATION_STARTED, IMAGE_GENERATION_SUCCESS, IMAGE_GENERATION_FAILED,
@@ -19,8 +18,6 @@ from bot.texts import badge
 import bot.texts as texts
 
 router = Router()
-
-IMAGES_DIR = "images"
 
 MENU_BUTTONS = {
     texts.MAIN_MENU_GENERATE,
@@ -39,12 +36,7 @@ async def generate_prompt(message: Message, session):
         "ایده یا چیزی که می‌خوای ببینی رو به زبان طبیعی برام بنویس تا برات به تصویر تبدیلش کنم ✨\n\n"
         "مثلاً:\n"
         "«یک شهر آینده‌نگر در شب، باران، نورهای نئون، سبک سینمایی و واقع‌گرایانه»\n\n"
-        "💡 هرچه توضیحت دقیق‌تر باشه، نتیجه به چیزی که می‌خوای نزدیک‌تر می‌شه.\n\n"
-        "🖼️ ویرایش تصویر (مخصوص کاربران پریمیوم 💎):\n"
-        "اگر می‌خوای یک تصویر ساخته‌شده قبلی رو ویرایش کنی، روی همون تصویر Reply بزن و تغییر موردنظرت رو بنویس.\n\n"
-        "مثلاً:\n"
-        "«لباس شخصیت رو قرمز کن و پس‌زمینه رو به یک جنگل تبدیل کن.»\n\n"
-        "📷 همچنین می‌تونی یک عکس همراه با کپشن بفرستی تا عکست رو ویرایش کنم. (مخصوص کاربران پریمیوم 💎)"
+        "💡 هرچه توضیحت دقیق‌تر باشه، نتیجه به چیزی که می‌خوای نزدیک‌تر می‌شه."
     ))
 
 
@@ -89,32 +81,22 @@ async def handle_generate(message: Message, session):
 
         await gen_msg.delete()
 
-        user_dir = os.path.join(IMAGES_DIR, str(user.telegram_id))
-        os.makedirs(user_dir, exist_ok=True)
-
-        file_path = os.path.join(user_dir, f"gen_{message.message_id}.png")
-        with open(file_path, "wb") as f:
-            f.write(image_bytes)
-
         if settings.API_SERVER == "bale":
             from bot.utils.bale_upload import send_photo_bytes_raw
-            result = await send_photo_bytes_raw(
+            await send_photo_bytes_raw(
                 token=settings.BOT_TOKEN,
                 chat_id=message.chat.id,
                 image_bytes=image_bytes,
                 caption=f"✅ {message.text[:100]}",
             )
-            sent_msg_id = result.get("result", {}).get("message_id", 0)
         else:
             photo = BufferedInputFile(image_bytes, filename="image.png")
-            sent_msg = await message.answer_photo(
+            await message.answer_photo(
                 photo=photo,
                 caption=f"✅ {message.text[:100]}",
             )
-            sent_msg_id = sent_msg.message_id
 
         await consume_quota(session, user)
-        await save_image(session, user, sent_msg_id, file_path, message.text)
         await log_event(session, user, IMAGE_GENERATION_SUCCESS)
         if user.tier == "free":
             remaining = await get_remaining(session, user)

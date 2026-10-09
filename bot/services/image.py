@@ -55,22 +55,3 @@ async def generate_image(prompt: str, tier: str, width: int = 1024, height: int 
         model, width, height, tokens,
     )
     return await _extract_image_bytes(img), tokens
-
-
-async def edit_image(file_path: str, prompt: str, tier: str, width: int = 1024, height: int = 1024) -> tuple[bytes, int | None]:
-    model = TIER_MODELS[tier]
-    log.info("Editing image: model=%s size=%dx%d file=%s prompt=%s", model, width, height, file_path, prompt[:80])
-    with open(file_path, "rb") as f:
-        result = await client.images.edit(
-            model=model,
-            image=f,
-            prompt=prompt,
-            size=f"{width}x{height}",
-        )
-    img = result.data[0]
-    tokens = _extract_tokens(result)
-    log.info(
-        "Image edited: model=%s size=%dx%d tokens=%s",
-        model, width, height, tokens,
-    )
-    return await _extract_image_bytes(img), tokens

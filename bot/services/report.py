@@ -96,8 +96,6 @@ async def send_error_report(
 
 OPERATION_FA = {
     "generate": "ساخت تصویر",
-    "edit": "ویرایش (ریپلای)",
-    "photo_edit": "ویرایش (عکس+کپشن)",
 }
 
 

@@ -105,41 +105,6 @@ async def set_generating(session: AsyncSession, user: User, value: bool) -> None
     await session.commit()
 
 
-async def save_image(session: AsyncSession, user: User, message_id: int, file_path: str, prompt: str) -> None:
-    img = GeneratedImage(
-        user_id=user.id,
-        message_id=message_id,
-        file_path=file_path,
-        prompt=prompt,
-    )
-    session.add(img)
-    await session.commit()
-
-    result = await session.execute(
-        select(GeneratedImage)
-        .where(GeneratedImage.user_id == user.id)
-        .order_by(GeneratedImage.created_at.desc())
-    )
-    images = result.scalars().all()
-    if len(images) > 5:
-        for old_img in images[5:]:
-            import os
-            if os.path.exists(old_img.file_path):
-                os.remove(old_img.file_path)
-            await session.delete(old_img)
-        await session.commit()
-
-
-async def get_image_by_message(session: AsyncSession, user: User, message_id: int) -> GeneratedImage | None:
-    result = await session.execute(
-        select(GeneratedImage).where(
-            GeneratedImage.user_id == user.id,
-            GeneratedImage.message_id == message_id,
-        )
-    )
-    return result.scalar_one_or_none()
-
-
 async def get_all_users_count(session: AsyncSession) -> int:
     result = await session.execute(select(func.count(User.id)))
     return result.scalar()

@@ -19,7 +19,7 @@ from bot.middlewares.force_join import (
     PrivateChatMiddleware,
 )
 from bot.services.queue import init_queues
-from bot.handlers import start, generate, edit, balance, premium, admin
+from bot.handlers import start, generate, balance, premium, admin
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -88,7 +88,6 @@ async def main():
     dp.include_router(premium.router)
     dp.include_router(balance.router)
     dp.include_router(generate.router)
-    dp.include_router(edit.router)
 
     if settings.API_SERVER == "bale":
         from bot.handlers import bale_payment
