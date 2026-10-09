@@ -97,7 +97,7 @@ async def handle_generate(message: Message, session):
             )
 
         await consume_quota(session, user)
-        await log_event(session, user, IMAGE_GENERATION_SUCCESS)
+        await log_event(session, user, IMAGE_GENERATION_SUCCESS, {"tier": user.tier})
         if user.tier == "free":
             remaining = await get_remaining(session, user)
             if remaining == 1:

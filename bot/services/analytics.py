@@ -12,7 +12,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.config import settings
-from bot.db.models import GeneratedImage, User, UserEvent
+from bot.db.models import User, UserEvent
 from bot.utils.timezone import tehran_day_utc_window, today_in_tehran
 
 logger = logging.getLogger(__name__)
@@ -403,14 +403,4 @@ async def get_retention_overview(session: AsyncSession) -> dict[int, float]:
     return out
 
 
-async def get_generated_images_count_today(session: AsyncSession) -> int:
-    start, end = _day_window(today_in_tehran())
-    stmt = (
-        select(func.count(GeneratedImage.id))
-        .join(User, GeneratedImage.user_id == User.id)
-        .where(
-            GeneratedImage.created_at >= start, GeneratedImage.created_at < end
-        )
-    )
-    result = await session.execute(exclude_admins(stmt))
-    return result.scalar() or 0
+

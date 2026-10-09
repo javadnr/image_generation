@@ -410,6 +410,29 @@ async def test_retention_overview_shape(db):
         assert 0.0 <= rate <= 1.0
 
 
+# ─── Per-tier image counts from success events ────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_tier_images_counted_from_success_events(db):
+    from bot.services import user as user_svc
+
+    u_free = await _make_user(db, 801)
+    u_bronze = await _make_user(db, 802)
+    await db.commit()
+
+    await az.log_event(db, u_free, az.IMAGE_GENERATION_SUCCESS, {"tier": "free"})
+    await az.log_event(db, u_free, az.IMAGE_GENERATION_SUCCESS, {"tier": "free"})
+    await az.log_event(db, u_bronze, az.IMAGE_GENERATION_SUCCESS, {"tier": "bronze"})
+    # legacy event without tier meta must not inflate any tier
+    await az.log_event(db, u_bronze, az.IMAGE_GENERATION_SUCCESS)
+
+    assert await user_svc.get_tier_images_today(db, "free") == 2
+    assert await user_svc.get_tier_images_today(db, "bronze") == 1
+    assert await user_svc.get_tier_images_today(db, "silver") == 0
+    assert await user_svc.get_tier_images_today(db, "gold") == 0
+
+
 # ─── Free limit dedupe ──────────────────────────────────────────────────
 
 

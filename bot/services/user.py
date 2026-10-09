@@ -1,8 +1,8 @@
 from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from bot.db.models import User, GeneratedImage
+from bot.db.models import User, UserEvent
 from bot.config import settings
-from bot.services.analytics import exclude_admins
+from bot.services.analytics import exclude_admins, IMAGE_GENERATION_SUCCESS
 from bot.utils.timezone import tehran_day_utc_window, today_in_tehran
 
 
@@ -137,18 +137,23 @@ async def get_tier_users_count(session: AsyncSession, tier: str) -> int:
 
 
 async def get_tier_images_today(session: AsyncSession, tier: str) -> int:
+    """Count today's successful generations for a tier.
+
+    Source is IMAGE_GENERATION_SUCCESS events (images are no longer saved
+    to disk/DB). Tier is read from event metadata recorded at success time.
+    """
     start, end = tehran_day_utc_window(today_in_tehran())
     stmt = (
-        select(func.count(GeneratedImage.id))
-        .join(User)
+        select(UserEvent.event_meta)
+        .join(User, UserEvent.user_id == User.id)
         .where(
-            User.tier == tier,
-            GeneratedImage.created_at >= start,
-            GeneratedImage.created_at < end,
+            UserEvent.event_type == IMAGE_GENERATION_SUCCESS,
+            UserEvent.created_at >= start,
+            UserEvent.created_at < end,
         )
     )
     result = await session.execute(exclude_admins(stmt))
-    return result.scalar()
+    return sum(1 for (meta,) in result.all() if (meta or {}).get("tier") == tier)
 
 
 async def reset_all_daily(session: AsyncSession, include_free: bool = False) -> None:
