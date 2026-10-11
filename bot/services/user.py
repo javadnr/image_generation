@@ -106,8 +106,8 @@ async def set_generating(session: AsyncSession, user: User, value: bool) -> None
 
 
 VALID_QUALITIES = ("low", "medium", "high")
-VALID_MODELS = ("gpt-image-1-mini", "gpt-image-2.5-flare", "gpt-image-2.5-sunburst")
-MODEL_PREMIUM_ONLY = ("gpt-image-2.5-flare", "gpt-image-2.5-sunburst")
+VALID_MODELS = ("gpt-image-2.5-flare", "gpt-image-2.5-sunburst")
+MODEL_PREMIUM_ONLY = ("gpt-image-2.5-sunburst",)
 
 
 async def set_quality(session: AsyncSession, user: User, quality: str) -> None:
