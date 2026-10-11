@@ -87,13 +87,15 @@ def test_ceil_price_rounds_up_to_10k():
     assert pricing_svc.ceil_price(80001) == 90000
 
 
-def test_quality_breakdown_math(catalog):
+def test_quality_breakdown_math(catalog, monkeypatch):
+    from bot.config import settings
     from bot.handlers import premium as premium_h
+    monkeypatch.setattr(settings, "IMAGE_EDIT_COST_TOKENS", 4000)
 
-    # 10,000 tokens @ 200/443/1760 per image
-    assert premium_h._quality_breakdown(10000) == "50 پایین | 22 متوسط | 5 بالا"
-    assert premium_h._quality_breakdown(25000) == "125 پایین | 56 متوسط | 14 بالا"
-    assert premium_h._quality_breakdown(60000) == "300 پایین | 135 متوسط | 34 بالا"
+    # 10,000 tokens @ 200/443/1760 per image + 4000-cost edits
+    assert premium_h._quality_breakdown(10000) == "50 پایین | 22 متوسط | 5 بالا | 2 ویرایش"
+    assert premium_h._quality_breakdown(25000) == "125 پایین | 56 متوسط | 14 بالا | 6 ویرایش"
+    assert premium_h._quality_breakdown(60000) == "300 پایین | 135 متوسط | 34 بالا | 15 ویرایش"
 
 
 def test_quality_breakdown_text_lists_all_plans(catalog):
@@ -132,6 +134,31 @@ def test_credits_used_math(catalog):
     assert credits_used(0, 200) is None
     assert format_credits(20.0) == "20"
     assert format_credits(2.5) == "2.5"
+
+
+def test_edits_available_math(monkeypatch):
+    from bot.config import settings
+    from bot.services.models import edits_available
+    monkeypatch.setattr(settings, "IMAGE_EDIT_COST_TOKENS", 4000)
+
+    assert edits_available(10000, 4000) == 2
+    assert edits_available(25000, 4000) == 6
+    assert edits_available(60000, 4000) == 15
+    assert edits_available(3999, 4000) == 0
+    assert edits_available(0, 4000) == 0
+    assert edits_available(10000, 0) == 0
+    assert edits_available(10000, None) == 0
+
+
+def test_plan_breakdown_includes_edits(catalog, monkeypatch):
+    from bot.config import settings
+    from bot.handlers import premium as premium_h
+    monkeypatch.setattr(settings, "IMAGE_EDIT_COST_TOKENS", 4000)
+
+    text = premium_h._quality_breakdown_text()
+    assert "2 ویرایش" in text
+    assert "6 ویرایش" in text
+    assert "15 ویرایش" in text
 
 
 def test_model_help_text(catalog):

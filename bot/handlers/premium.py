@@ -1,7 +1,7 @@
 from datetime import datetime
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-from bot.services.user import get_or_create_user, get_tier_limit
+from bot.services.user import get_or_create_user, get_tier_limit, get_edit_cost
 from bot.services.report import send_premium_report
 from bot.services.analytics import (
     log_event, maybe_log_free_limit, PRICING_VIEWED, BUY_SUBSCRIPTION_CLICKED,
@@ -9,6 +9,7 @@ from bot.services.analytics import (
 )
 from bot.services.models import (
     plan_allowance, estimate_tokens, default_model, images_per_quality,
+    edits_available,
 )
 from bot.services.payment import (
     create_zarinpal_purchase, verify_zarinpal_payment,
@@ -53,6 +54,7 @@ def _quality_breakdown(allowance: int) -> str | None:
         estimate = estimate_tokens(default_model(), quality)
         if estimate:
             parts.append(f"{allowance // estimate:,} {QUALITY_FA[quality]}")
+    parts.append(f"{edits_available(allowance, get_edit_cost())} ویرایش")
     return " | ".join(parts) if parts else None
 
 

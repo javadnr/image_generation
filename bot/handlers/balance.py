@@ -2,9 +2,9 @@ from aiogram import Router, F
 from aiogram.types import Message
 from bot.services.user import (
     get_or_create_user, get_remaining, get_tier_limit,
-    estimate_tokens_for,
+    estimate_tokens_for, get_edit_cost,
 )
-from bot.services.models import default_model, images_per_quality
+from bot.services.models import default_model, images_per_quality, edits_available
 from bot.keyboards.reply import main_menu
 from bot.keyboards.inline import plans_button
 from bot.texts import badge
@@ -32,11 +32,14 @@ async def balance(message: Message, session):
         balance_tokens = user.token_balance or 0
         model = user.image_model or default_model()
         estimate = estimate_tokens_for(user)
-        per_quality = images_per_quality(balance_tokens, model)
-        breakdown = "\n".join(
+        lines = [
             f"• {texts.QUALITY_LABELS[q]}: {count:,} تصویر"
             for q, count in per_quality.items()
-        ) or "—"
+        ]
+        lines.append(
+            f"• ویرایش عکس: {edits_available(balance_tokens, get_edit_cost()):,} تصویر"
+        )
+        breakdown = "\n".join(lines)
         text = texts.QUOTA_REMAINING_TOKENS.format(
             tier=tier_name,
             model=model,

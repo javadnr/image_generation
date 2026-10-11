@@ -100,6 +100,13 @@ def format_credits(value: float) -> str:
     return str(int(value)) if value == int(value) else f"{value:.1f}"
 
 
+def edits_available(balance: int, edit_cost: int | None) -> int:
+    """Whole image edits affordable (floor division, partial edits impossible)."""
+    if not edit_cost or edit_cost <= 0:
+        return 0
+    return max(0, (balance or 0)) // edit_cost
+
+
 def images_per_quality(balance: int, model_id: str | None) -> dict:
     """Approximate remaining images per quality (floor division).
 
