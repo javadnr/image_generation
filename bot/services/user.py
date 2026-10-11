@@ -105,6 +105,16 @@ async def set_generating(session: AsyncSession, user: User, value: bool) -> None
     await session.commit()
 
 
+VALID_QUALITIES = ("low", "medium", "high")
+
+
+async def set_quality(session: AsyncSession, user: User, quality: str) -> None:
+    if quality not in VALID_QUALITIES:
+        raise ValueError(f"Invalid quality: {quality}")
+    user.image_quality = quality
+    await session.commit()
+
+
 async def get_all_users_count(session: AsyncSession) -> int:
     result = await session.execute(select(func.count(User.id)))
     return result.scalar()

@@ -6,7 +6,7 @@ import bot.texts as texts
 def main_menu(user) -> ReplyKeyboardMarkup:
     buttons = [
         [KeyboardButton(text=texts.MAIN_MENU_GENERATE), KeyboardButton(text=texts.MAIN_MENU_BALANCE)],
-        [KeyboardButton(text=texts.MAIN_MENU_PREMIUM)],
+        [KeyboardButton(text=texts.MAIN_MENU_PREMIUM), KeyboardButton(text=texts.MAIN_MENU_QUALITY)],
     ]
     if user.telegram_id in settings.ADMIN_IDS:
         buttons.append([KeyboardButton(text=texts.MAIN_MENU_ADMIN)])

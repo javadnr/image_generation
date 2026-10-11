@@ -38,14 +38,14 @@ def _extract_tokens(result) -> int | None:
     return tokens if isinstance(tokens, int) else None
 
 
-async def generate_image(prompt: str, tier: str, width: int = 1024, height: int = 1024) -> tuple[bytes, int | None]:
+async def generate_image(prompt: str, tier: str, width: int = 1024, height: int = 1024, quality: str = "low") -> tuple[bytes, int | None]:
     model = TIER_MODELS[tier]
-    log.info("Generating image: model=%s size=%dx%d prompt=%s", model, width, height, prompt[:80])
+    log.info("Generating image: model=%s size=%dx%d quality=%s prompt=%s", model, width, height, quality, prompt[:80])
     result = await client.images.generate(
         model=model,
         prompt=prompt,
         size=f"{width}x{height}",
-        quality="low",
+        quality=quality,
         n=1,
     )
     img = result.data[0]

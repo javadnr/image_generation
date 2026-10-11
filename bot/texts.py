@@ -10,6 +10,7 @@ WELCOME = "🎨 به ربات تولید تصویر با هوش مصنوعی خ�
 MAIN_MENU_GENERATE = "🎨 ساخت تصویر"
 MAIN_MENU_BALANCE = "📊 موجودی"
 MAIN_MENU_PREMIUM = "💎 خرید اشتراک"
+MAIN_MENU_QUALITY = "🖼️ تنظیمات تصویر"
 MAIN_MENU_ADMIN = "📊 وضعیت ربات"
 
 TIER_NAMES_FA = {"bronze": "برنزی", "silver": "نقره‌ای", "gold": "طلایی"}
@@ -21,6 +22,12 @@ LIMIT_REACHED_BUY = "⚠️ سقف استفاده شما تمام شده است.
 QUOTA_EXCEEDED_MAX = "⚠️ سقف کل اشتراک شما تمام شده.\nبه پلن رایگان بازگشتید."
 QUOTA_REMAINING = "📊 موجودی شما\n\n📦 پلن: {tier}\n🖼 روزانه: {daily_remaining} از {daily_limit}\n🖼 کل: {total_remaining} از {max_limit}"
 QUOTA_REMAINING_FREE = "📊 موجودی شما\n\n📦 پلن: رایگان\n🖼 اعتبار باقی‌مانده: {daily_remaining} از {daily_limit}"
+
+# Quality
+QUALITY_TITLE = "کیفیت تصویر خروجی بعدی رو انتخاب کن:"
+QUALITY_LABELS = {"low": "پایین", "medium": "متوسط", "high": "بالا"}
+QUALITY_SET = "✅ کیفیت تصویر روی {label} تنظیم شد."
+QUALITY_LOCKED = "🔒 این کیفیت مخصوص کاربران پریمیوم است."
 
 # Premium
 PREMIUM_TITLE = "💎 اشتراک پریمیوم"

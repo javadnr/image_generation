@@ -19,6 +19,7 @@ class User(Base):
     is_generating = Column(Boolean, default=False)
     image_width = Column(Integer, default=1024)
     image_height = Column(Integer, default=1024)
+    image_quality = Column(String(10), default="low")
     optimize_prompt = Column(Boolean, default=False)
     premium_expire_date = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

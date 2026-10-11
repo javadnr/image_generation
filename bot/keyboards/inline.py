@@ -45,6 +45,21 @@ def plans_button() -> InlineKeyboardMarkup:
     ])
 
 
+QUALITY_OPTIONS = (("low", "پایین"), ("medium", "متوسط"), ("high", "بالا"))
+
+
+def quality_keyboard(tier: str, current: str) -> InlineKeyboardMarkup:
+    buttons = []
+    for value, label in QUALITY_OPTIONS:
+        if tier == "free" and value != "low":
+            text = f"🔒 {label}"
+        else:
+            tick = "✅ " if value == current else ""
+            text = f"{tick}{label}"
+        buttons.append([InlineKeyboardButton(text=text, callback_data=f"quality:{value}")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
 def admin_status(bot_enabled: bool) -> InlineKeyboardMarkup:
     toggle_text = "🔴 غیرفعال کردن ربات" if bot_enabled else "🟢 فعال کردن ربات"
     return InlineKeyboardMarkup(inline_keyboard=[

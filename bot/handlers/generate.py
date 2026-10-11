@@ -23,6 +23,7 @@ MENU_BUTTONS = {
     texts.MAIN_MENU_GENERATE,
     texts.MAIN_MENU_BALANCE,
     texts.MAIN_MENU_PREMIUM,
+    texts.MAIN_MENU_QUALITY,
     texts.MAIN_MENU_ADMIN,
 }
 
@@ -76,7 +77,10 @@ async def handle_generate(message: Message, session):
 
         logging.info("User %d tier=%s generating %dx%d", user.telegram_id, user.tier, width, height)
 
-        image_bytes, tokens = await generate_image(message.text, user.tier, width, height)
+        image_bytes, tokens = await generate_image(
+            message.text, user.tier, width, height,
+            quality=user.image_quality or "low",
+        )
         logging.info("Image received: %d bytes", len(image_bytes))
 
         await gen_msg.delete()
