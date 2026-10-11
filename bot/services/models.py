@@ -84,6 +84,22 @@ def estimate_tokens(model_id: str | None, quality: str | None) -> int | None:
 QUALITY_ORDER = ("low", "medium", "high")
 
 
+def credits_used(actual_tokens: int | None, low_estimate: int | None) -> float | None:
+    """Image-credit equivalent of actual output tokens.
+
+    1 credit = estimated tokens of one Low-quality image. Returns None
+    when either side is unknown.
+    """
+    if not actual_tokens or not low_estimate:
+        return None
+    return actual_tokens / low_estimate
+
+
+def format_credits(value: float) -> str:
+    """Compact display: 20 instead of 20.0, 2.5 stays 2.5."""
+    return str(int(value)) if value == int(value) else f"{value:.1f}"
+
+
 def images_per_quality(balance: int, model_id: str | None) -> dict:
     """Approximate remaining images per quality (floor division).
 

@@ -122,6 +122,28 @@ def test_fx_note_hidden_without_rate(catalog):
     assert premium_h._fx_note_text() == ""
 
 
+def test_credits_used_math(catalog):
+    from bot.services.models import credits_used, format_credits
+
+    assert credits_used(500, 200) == 2.5
+    assert credits_used(4000, 200) == 20.0
+    assert credits_used(None, 200) is None
+    assert credits_used(500, None) is None
+    assert credits_used(0, 200) is None
+    assert format_credits(20.0) == "20"
+    assert format_credits(2.5) == "2.5"
+
+
+def test_model_help_text(catalog):
+    import bot.texts as texts
+
+    assert "flare" in texts.MODEL_HELP
+    assert "sunburst" in texts.MODEL_HELP
+    assert "هم‌قیمت" in texts.MODEL_HELP
+    assert "توکن" not in texts.MODEL_HELP
+    assert "token" not in texts.MODEL_HELP.lower()
+
+
 def test_images_per_quality_math(catalog):
     from bot.services.models import images_per_quality
 

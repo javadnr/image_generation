@@ -17,7 +17,7 @@ def _current_model(user) -> str:
 async def model_menu(message: Message, session):
     user = await get_or_create_user(session, message.from_user.id)
     await message.answer(
-        badge(texts.MODEL_TITLE),
+        badge(f"{texts.MODEL_TITLE}\n\n{texts.MODEL_HELP}"),
         reply_markup=model_keyboard(user.tier, _current_model(user)),
     )
 

@@ -11,6 +11,7 @@ from bot.services.analytics import (
 from bot.handlers.premium import answer_quota_exceeded
 from bot.services.queue import acquire_queue, release_queue
 from bot.services.image import generate_image, TIER_MODELS
+from bot.services.models import default_model, estimate_tokens, credits_used, format_credits
 from bot.services.report import send_error_report, send_processed_report
 from bot.keyboards.reply import main_menu
 from bot.keyboards.inline import plans_button
@@ -83,19 +84,38 @@ async def handle_generate(message: Message, session):
 
         await gen_msg.delete()
 
+        credit_line = None
+        if user.tier == "free":
+            remaining_after = max(0, (await get_remaining(session, user)) - 1)
+            credit_line = f"💳 مصرف: 1 اعتبار | باقی‌مانده: {remaining_after} تصویر"
+        else:
+            model_id = user.image_model or default_model()
+            low_est = estimate_tokens(model_id, "low")
+            used = credits_used(tokens, low_est)
+            if used is not None:
+                remaining_after = max(0, (user.token_balance or 0) - (tokens or 0)) // low_est
+                credit_line = (
+                    f"💳 مصرف: {format_credits(used)} اعتبار | "
+                    f"باقی‌مانده: {remaining_after} تصویر"
+                )
+        if credit_line:
+            caption = f"✅ {(message.text or '')[:60]}\n{credit_line}"
+        else:
+            caption = f"✅ {message.text[:100]}"
+
         if settings.API_SERVER == "bale":
             from bot.utils.bale_upload import send_photo_bytes_raw
             await send_photo_bytes_raw(
                 token=settings.BOT_TOKEN,
                 chat_id=message.chat.id,
                 image_bytes=image_bytes,
-                caption=f"✅ {message.text[:100]}",
+                caption=caption,
             )
         else:
             photo = BufferedInputFile(image_bytes, filename="image.png")
             await message.answer_photo(
                 photo=photo,
-                caption=f"✅ {message.text[:100]}",
+                caption=caption,
             )
 
         if user.tier == "free":
