@@ -124,16 +124,19 @@ def test_fx_note_hidden_without_rate(catalog):
     assert premium_h._fx_note_text() == ""
 
 
-def test_credits_used_math(catalog):
-    from bot.services.models import credits_used, format_credits
+def test_used_credits_math(catalog):
+    from bot.services.models import used_credits
 
-    assert credits_used(500, 200) == 2.5
-    assert credits_used(4000, 200) == 20.0
-    assert credits_used(None, 200) is None
-    assert credits_used(500, None) is None
-    assert credits_used(0, 200) is None
-    assert format_credits(20.0) == "20"
-    assert format_credits(2.5) == "2.5"
+    # Spec examples with low estimate 500: 200->1, 500->1, 501->2, 700->2, 1200->3
+    assert used_credits(200, 500) == 1
+    assert used_credits(500, 500) == 1
+    assert used_credits(501, 500) == 2
+    assert used_credits(700, 500) == 2
+    assert used_credits(1200, 500) == 3
+    assert used_credits(700, 200) == 4
+    assert used_credits(None, 200) is None
+    assert used_credits(500, None) is None
+    assert used_credits(0, 200) is None
 
 
 def test_edits_available_math(monkeypatch):

@@ -150,12 +150,15 @@ async def test_precheck_allows_sufficient_balance(db, catalog):
 
 @pytest.mark.asyncio
 async def test_deduct_exact_actual_usage(db, catalog):
+    # exact API-reported tokens are deducted, no rounding
     user = await _make_user(db, 1006, tier="bronze", token_balance=10000)
     await db.commit()
 
-    remaining = await user_svc.deduct_tokens(db, user, 500)
-    assert remaining == 9500
-    assert user.token_balance == 9500
+    assert await user_svc.deduct_tokens(db, user, 200) == 9800
+    assert await user_svc.deduct_tokens(db, user, 500) == 9300
+    assert await user_svc.deduct_tokens(db, user, 501) == 8799
+    assert await user_svc.deduct_tokens(db, user, 1200) == 7599
+    assert user.token_balance == 7599
 
 
 @pytest.mark.asyncio
@@ -163,7 +166,7 @@ async def test_deduct_floors_at_zero(db, catalog):
     user = await _make_user(db, 1007, tier="bronze", token_balance=200)
     await db.commit()
 
-    remaining = await user_svc.deduct_tokens(db, user, 3000)
+    remaining = await user_svc.deduct_tokens(db, user, 2950)
     assert remaining == 0
     assert user.token_balance == 0
 
@@ -203,8 +206,8 @@ async def test_mixed_quality_sequence(db, catalog):
 
     user.image_quality = "high"
     assert await user_svc.can_generate(db, user) is True
-    await user_svc.deduct_tokens(db, user, 3000)
-    assert user.token_balance == 21800
+    await user_svc.deduct_tokens(db, user, 2950)
+    assert user.token_balance == 21850
 
 
 @pytest.mark.asyncio
@@ -262,11 +265,12 @@ async def test_has_edit_balance(db, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_edit_deducts_fixed_cost(db, monkeypatch):
+async def test_edit_deducts_exact_actual_usage(db, catalog, monkeypatch):
     from bot.config import settings
     monkeypatch.setattr(settings, "IMAGE_EDIT_COST_TOKENS", 4000)
     user = await _make_user(db, 2005, tier="bronze", token_balance=10000)
     await db.commit()
 
-    remaining = await user_svc.deduct_tokens(db, user, user_svc.get_edit_cost())
-    assert remaining == 6000
+    # edit reported 700 actual tokens -> exactly 700 deducted
+    remaining = await user_svc.deduct_tokens(db, user, 700)
+    assert remaining == 9300

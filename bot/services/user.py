@@ -48,7 +48,7 @@ def estimate_tokens_for(user: User) -> int | None:
 
 
 async def deduct_tokens(session: AsyncSession, user: User, amount: int | None) -> int:
-    """Deduct actual output tokens. Floors at zero. Returns remaining balance."""
+    """Deduct the exact actual output tokens. Floors at zero. Returns balance."""
     if amount is None:
         logger.warning("No usage reported for user=%d; deducting 0", user.telegram_id)
         amount = 0

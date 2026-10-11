@@ -4,7 +4,7 @@ import tempfile
 from aiogram import Router, F
 from aiogram.types import Message, BufferedInputFile
 from bot.config import settings
-from bot.services.user import get_or_create_user, set_generating, has_edit_balance, get_edit_cost, deduct_tokens
+from bot.services.user import get_or_create_user, set_generating, has_edit_balance, deduct_tokens
 from bot.services.analytics import (
     log_event, IMAGE_GENERATION_STARTED, IMAGE_GENERATION_SUCCESS, IMAGE_GENERATION_FAILED,
 )
@@ -12,7 +12,7 @@ from bot.handlers.premium import answer_quota_exceeded
 from bot.services.queue import acquire_queue, release_queue
 from bot.services.image import edit_image
 from bot.services.report import send_error_report, send_processed_report
-from bot.services.models import default_model, estimate_tokens, credits_used, format_credits
+from bot.services.models import default_model, estimate_tokens, used_credits
 from bot.keyboards.inline import premium_menu
 from bot.texts import badge
 import bot.texts as texts
@@ -32,7 +32,6 @@ async def handle_photo_edit(message: Message, session, bot):
     if not prompt or not prompt.strip():
         return
 
-    cost = get_edit_cost()
     if not has_edit_balance(user):
         await answer_quota_exceeded(message, session, user)
         return
@@ -64,18 +63,19 @@ async def handle_photo_edit(message: Message, session, bot):
             os.unlink(tmp.name)
         await gen_msg.delete()
 
-        # Fixed edit cost, deducted only after a successful edit.
-        await deduct_tokens(session, user, cost)
+        # Exact actual API usage; deducted only after a successful edit.
+        balance_before = user.token_balance or 0
+        await deduct_tokens(session, user, tokens)
         await log_event(session, user, IMAGE_GENERATION_SUCCESS, {"tier": user.tier})
 
         model_id = user.image_model or default_model()
         low_est = estimate_tokens(model_id, "low")
-        used = credits_used(cost, low_est)
+        used = used_credits(tokens, low_est)
         if used is not None:
-            remaining_imgs = max(0, user.token_balance or 0) // low_est
+            remaining_imgs = max(0, balance_before - (tokens or 0)) // low_est
             caption = (
                 f"✅ {(prompt or '')[:60]}\n"
-                f"💳 مصرف: {format_credits(used)} اعتبار | "
+                f"💳 مصرف: {used} اعتبار | "
                 f"باقی‌مانده: {remaining_imgs} تصویر"
             )
         else:
