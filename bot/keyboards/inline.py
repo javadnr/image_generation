@@ -2,6 +2,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from bot.config import settings
 from bot.services.user import get_tier_limit
 from bot.services.report import TIER_PRICES
+from bot.services.models import model_ids, model_label, is_free_model
 import bot.texts as texts
 
 
@@ -60,21 +61,14 @@ def quality_keyboard(tier: str, current: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-MODEL_OPTIONS = (
-    "gpt-image-2.5-flare",
-    "gpt-image-2.5-sunburst",
-)
-MODEL_PREMIUM_ONLY = ("gpt-image-2.5-sunburst",)
-
-
 def model_keyboard(tier: str, current: str) -> InlineKeyboardMarkup:
     buttons = []
-    for value in MODEL_OPTIONS:
-        if tier == "free" and value in MODEL_PREMIUM_ONLY:
-            text = f"🔒 {value}"
+    for value in model_ids():
+        if tier == "free" and not is_free_model(value):
+            text = f"🔒 {model_label(value)}"
         else:
             tick = "✅ " if value == current else ""
-            text = f"{tick}{value}"
+            text = f"{tick}{model_label(value)}"
         buttons.append([InlineKeyboardButton(text=text, callback_data=f"model:{value}")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 

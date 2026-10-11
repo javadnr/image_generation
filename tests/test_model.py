@@ -1,4 +1,6 @@
 import asyncio
+import base64
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -9,6 +11,23 @@ from sqlalchemy.pool import StaticPool
 from bot.db.models import Base, User
 from bot.keyboards.inline import model_keyboard
 from bot.services import user as user_svc
+from bot.services import models as models_svc
+
+TEST_MODELS = {
+    "gpt-image-2.5-flare": {
+        "label": "gpt-image-2.5-flare",
+        "free": True,
+        "cost": {
+            "low": {"cost": 0.006, "tokens": 200},
+            "medium": {"cost": 0.0133, "tokens": 443},
+            "high": {"cost": 0.0266, "tokens": 1760},
+        },
+    },
+    "gpt-image-2.5-sunburst": {
+        "label": "gpt-image-2.5-sunburst",
+        "free": False,
+    },
+}
 
 
 @pytest.fixture(scope="session")
@@ -37,6 +56,13 @@ async def db():
     await engine.dispose()
 
 
+@pytest.fixture
+def catalog(monkeypatch):
+    from bot.config import settings
+    monkeypatch.setattr(settings, "MODELS", TEST_MODELS)
+    return TEST_MODELS
+
+
 def _texts(kb):
     return [btn.text for row in kb.inline_keyboard for btn in row]
 
@@ -45,17 +71,42 @@ def _callbacks(kb):
     return [btn.callback_data for row in kb.inline_keyboard for btn in row]
 
 
+def test_catalog_helpers(catalog):
+    assert models_svc.model_ids() == [
+        "gpt-image-2.5-flare", "gpt-image-2.5-sunburst",
+    ]
+    assert models_svc.is_free_model("gpt-image-2.5-flare") is True
+    assert models_svc.is_free_model("gpt-image-2.5-sunburst") is False
+    assert models_svc.default_model() == "gpt-image-2.5-flare"
+    assert models_svc.model_cost("gpt-image-2.5-flare", "low") == (0.006, 200)
+    assert models_svc.model_cost("gpt-image-2.5-flare", "high") == (0.0266, 1760)
+    assert models_svc.model_cost("gpt-image-2.5-sunburst", "low") == (None, None)
+    assert models_svc.model_cost("unknown", "low") == (None, None)
+
+
+def test_fallback_when_env_empty(monkeypatch):
+    from bot.config import settings
+    monkeypatch.setattr(settings, "MODELS", {})
+    assert models_svc.model_ids() == [
+        "gpt-image-2.5-flare", "gpt-image-2.5-sunburst",
+    ]
+    assert models_svc.default_model() == "gpt-image-2.5-flare"
+    assert models_svc.model_cost("gpt-image-2.5-flare", "medium") == (0.0133, 443)
+
+
 @pytest.mark.asyncio
-async def test_model_defaults_to_flare(db):
+async def test_model_defaults_to_first_free(db, catalog):
     user = User(telegram_id=911)
     db.add(user)
     await db.flush()
     await db.refresh(user)
-    assert user.image_model == "gpt-image-2.5-flare"
+    # column default is flare; catalog default is first free model
+    assert user.image_model in ("gpt-image-2.5-flare",)
+    assert models_svc.default_model() == "gpt-image-2.5-flare"
 
 
 @pytest.mark.asyncio
-async def test_set_model_persists_and_rejects_invalid(db):
+async def test_set_model_persists_and_rejects_invalid(db, catalog):
     user = User(telegram_id=912)
     db.add(user)
     await db.flush()
@@ -67,7 +118,7 @@ async def test_set_model_persists_and_rejects_invalid(db):
         await user_svc.set_model(db, user, "dall-e-3")
 
 
-def test_free_user_keyboard_tick_and_lock():
+def test_free_user_keyboard_tick_and_lock(catalog):
     kb = model_keyboard("free", "gpt-image-2.5-flare")
     texts = _texts(kb)
     assert texts[0].startswith("✅ ")
@@ -78,7 +129,7 @@ def test_free_user_keyboard_tick_and_lock():
     ]
 
 
-def test_premium_keyboard_tick_no_locks():
+def test_premium_keyboard_tick_no_locks(catalog):
     kb = model_keyboard("gold", "gpt-image-2.5-sunburst")
     texts = _texts(kb)
     assert not texts[0].startswith("✅ ")
@@ -87,11 +138,8 @@ def test_premium_keyboard_tick_no_locks():
 
 
 @pytest.mark.asyncio
-async def test_generate_passes_model_through():
+async def test_generate_passes_model_through(catalog):
     pytest.importorskip("openai")
-    import base64
-    from types import SimpleNamespace
-
     from bot.services import image as image_svc
 
     raw = base64.b64encode(b"fakepng").decode()
@@ -111,11 +159,8 @@ async def test_generate_passes_model_through():
 
 
 @pytest.mark.asyncio
-async def test_generate_falls_back_to_tier_model():
+async def test_generate_falls_back_to_tier_model(catalog):
     pytest.importorskip("openai")
-    import base64
-    from types import SimpleNamespace
-
     from bot.services import image as image_svc
 
     raw = base64.b64encode(b"fakepng").decode()

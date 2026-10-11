@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     REPORT_CHANNEL_ID: int | None = None
     PROCESSED_REQUESTS_CHANNEL_ID: int | None = None
     REQUIRED_CHANNELS: dict[str, str] = {}
+    MODELS: dict = {}
     BADGE: str = "@kiteck_TM"
     ZARINPAL_API_URL: str = ""
     ZARINPAL_PROJECT_ID: int = 0
@@ -71,6 +72,15 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return json.loads(v)
         return v
+
+    @validator("MODELS", pre=True)
+    def parse_models(cls, v):
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return {}
+            return json.loads(v)
+        return v or {}
 
     class Config:
         env_file = ".env"

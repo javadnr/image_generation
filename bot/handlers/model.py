@@ -1,19 +1,16 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
-from bot.services.user import (
-    get_or_create_user, set_model, VALID_MODELS, MODEL_PREMIUM_ONLY,
-)
+from bot.services.user import get_or_create_user, set_model
+from bot.services.models import model_ids, is_free_model, default_model
 from bot.keyboards.inline import model_keyboard
 from bot.texts import badge
 import bot.texts as texts
 
 router = Router()
 
-DEFAULT_MODEL = "gpt-image-2.5-flare"
-
 
 def _current_model(user) -> str:
-    return user.image_model or DEFAULT_MODEL
+    return user.image_model or default_model()
 
 
 @router.message(F.text == texts.MAIN_MENU_MODEL)
@@ -28,12 +25,12 @@ async def model_menu(message: Message, session):
 @router.callback_query(F.data.startswith("model:"))
 async def model_set(callback: CallbackQuery, session):
     value = callback.data.split(":", 1)[1]
-    if value not in VALID_MODELS:
+    if value not in model_ids():
         await callback.answer("⚠️ گزینه نامعتبر.", show_alert=True)
         return
 
     user = await get_or_create_user(session, callback.from_user.id)
-    if user.tier == "free" and value in MODEL_PREMIUM_ONLY:
+    if user.tier == "free" and not is_free_model(value):
         await callback.answer(texts.MODEL_LOCKED, show_alert=True)
         return
 

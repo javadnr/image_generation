@@ -106,8 +106,7 @@ async def set_generating(session: AsyncSession, user: User, value: bool) -> None
 
 
 VALID_QUALITIES = ("low", "medium", "high")
-VALID_MODELS = ("gpt-image-2.5-flare", "gpt-image-2.5-sunburst")
-MODEL_PREMIUM_ONLY = ("gpt-image-2.5-sunburst",)
+
 
 
 async def set_quality(session: AsyncSession, user: User, quality: str) -> None:
@@ -118,7 +117,8 @@ async def set_quality(session: AsyncSession, user: User, quality: str) -> None:
 
 
 async def set_model(session: AsyncSession, user: User, model: str) -> None:
-    if model not in VALID_MODELS:
+    from bot.services.models import model_ids
+    if model not in model_ids():
         raise ValueError(f"Invalid model: {model}")
     user.image_model = model
     await session.commit()
