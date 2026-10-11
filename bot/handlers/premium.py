@@ -31,11 +31,11 @@ def tooman_display(price: int) -> str:
 
 
 def _plan_images_text(plan: str, allowance: int) -> str:
-    """Approximate low-quality image count for a plan allowance."""
+    """Approximate image count for a plan allowance (Low-quality basis)."""
     estimate = estimate_tokens(default_model(), "low")
     if estimate:
-        return f"• تقریباً {allowance // estimate:,} تصویر با کیفیت پایین"
-    return f"• {allowance:,} توکن"
+        return f"• تقریباً {allowance // estimate:,} تصویر"
+    return f"• تقریباً {allowance:,} تصویر"
 
 
 def premium_text(user) -> str:
@@ -57,15 +57,13 @@ def premium_text(user) -> str:
         f"🆓 پلن رایگان\n"
         f"• {get_tier_limit('free')} تصویر رایگان\n\n"
         f"🥉 برنزی — {tooman_display(settings.BRONZE_PRICE)}\n"
-        f"• {plan_allowance('bronze'):,} توکن\n"
         f"{_plan_images_text('bronze', plan_allowance('bronze'))}\n\n"
         f"🥈 نقره‌ای — {tooman_display(settings.SILVER_PRICE)} ⭐ محبوب‌ترین\n"
-        f"• {plan_allowance('silver'):,} توکن\n"
         f"{_plan_images_text('silver', plan_allowance('silver'))}\n\n"
         f"🥇 طلایی — {tooman_display(settings.GOLD_PRICE)} 🔥 بیشترین اعتبار\n"
-        f"• {plan_allowance('gold'):,} توکن\n"
         f"{_plan_images_text('gold', plan_allowance('gold'))}\n\n"
-        f"💡 تعداد واقعی تصاویر بسته به مدل، کیفیت و مصرف توکن متفاوت است.\n\n"
+        f"📌 توجه: تعداد تصاویر نمایش‌داده‌شده بر اساس کیفیت پایین است. "
+        f"تولید تصویر با کیفیت بالاتر، از موجودی شما بیشتر کم می‌کند.\n\n"
         f"👇 پلن موردنظرت رو انتخاب کن:"
     )
 
@@ -144,12 +142,10 @@ async def buy_tier(callback: CallbackQuery, session):
                 [InlineKeyboardButton(text="✅ پرداخت را انجام دادم", callback_data=f"checkpay:{tx_id}")],
             ])
 
-            allowance = plan_allowance(tier)
             text = (
                 f"📋 پلن انتخابی: {texts.TIER_NAMES_FA[tier]}\n"
                 f"💰 مبلغ: {amount:,} تومان\n"
-                f"📅 مدت: {settings.PREMIUM_DURATION_DAYS} روز\n"
-                f"🔢 اعتبار: {allowance:,} توکن\n\n"
+                f"📅 مدت: {settings.PREMIUM_DURATION_DAYS} روز\n\n"
                 f"💡 روی دکمه پرداخت کلیک کنید و پس از تکمیل، دکمه «پرداخت را انجام دادم» را بزنید.\n"
                 f"⏳ لینک پرداخت به مدت {remaining} دقیقه معتبر است."
             )
@@ -169,12 +165,10 @@ async def handle_check_payment(callback: CallbackQuery, session):
 
     if result["success"]:
         plan = result["plan"]
-        granted = result.get("tokens_granted", 0)
         expire = result["expires_at"]
 
         text = (
             f"✅ اشتراک {texts.TIER_NAMES_FA[plan]} فعال شد!\n\n"
-            f"🔢 اعتبار: {granted:,} توکن\n"
             f"📅 پایان اشتراک: {expire}"
         )
         await callback.message.edit_text(badge(text))

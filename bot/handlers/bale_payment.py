@@ -73,12 +73,10 @@ async def handle_successful_payment(message: Message, **kwargs) -> None:
 
     if result["success"]:
         plan = result["plan"]
-        granted = result.get("tokens_granted", 0)
         expire = result["expires_at"]
 
         text = (
             f"✅ اشتراک {texts.TIER_NAMES_FA[plan]} فعال شد!\n\n"
-            f"🔢 اعتبار: {granted:,} توکن\n"
             f"📅 پایان اشتراک: {expire}"
         )
         await message.answer(badge(text), reply_markup=main_menu(user))
