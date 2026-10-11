@@ -44,6 +44,16 @@ def mock_zarinpal():
         yield client
 
 
+@pytest.fixture(autouse=True)
+def seeded_fx_rate():
+    import time
+    from bot.services import pricing as pricing_svc
+    saved = dict(pricing_svc._cache)
+    pricing_svc._cache.update({"rate": 100000.0, "at": time.monotonic()})
+    yield
+    pricing_svc._cache.update(saved)
+
+
 async def _make_user(session, telegram_id=123456, tier="free"):
     user = User(telegram_id=telegram_id, tier=tier)
     session.add(user)

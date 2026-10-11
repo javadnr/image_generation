@@ -27,9 +27,6 @@ class Settings(BaseSettings):
     SILVER_MAX_LIMIT: int = 300
     GOLD_MAX_LIMIT: int = 600
     BOT_ENABLED: bool = True
-    BRONZE_PRICE: int = 500000
-    SILVER_PRICE: int = 800000
-    GOLD_PRICE: int = 1400000
     REPORT_CHANNEL_ID: int | None = None
     PROCESSED_REQUESTS_CHANNEL_ID: int | None = None
     REQUIRED_CHANNELS: dict[str, str] = {}

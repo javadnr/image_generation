@@ -32,8 +32,12 @@ def premium_menu(user) -> InlineKeyboardMarkup:
         for tier, emoji in [("bronze", "🥉"), ("silver", "🥈"), ("gold", "🥇")]:
             price = plan_price_toman(tier)
             tag = tier_tags[tier]
+            price_text = (
+                f"{to_persian_digits(price // 1000)} هزار تومان"
+                if price is not None else "قیمت نامشخص"
+            )
             buttons.append([InlineKeyboardButton(
-                text=f"{emoji} {texts.TIER_NAMES_FA[tier]} — {to_persian_digits(price // 1000)} هزار تومان {tag}",
+                text=f"{emoji} {texts.TIER_NAMES_FA[tier]} — {price_text} {tag}",
                 callback_data=f"buy_{tier}",
             )])
     return InlineKeyboardMarkup(inline_keyboard=buttons)

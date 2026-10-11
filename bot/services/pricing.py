@@ -10,8 +10,8 @@ Price chain (all driven by .env data, no hardcoding):
 
 The exchange rate is NEVER fetched on the purchase path: a background
 task refreshes the cache every FX_TTL_SECONDS, and all price getters read
-the cache synchronously. When the rate or cost data is missing, static
-*_PRICE settings are used as fallback so sales never break.
+the cache synchronously. When the rate or cost data is missing, the price
+is None and the purchase is blocked — there are no hardcoded prices.
 """
 import asyncio
 import logging
@@ -20,8 +20,7 @@ import time
 
 import httpx
 
-from bot.config import settings
-from bot.services.models import default_model, models
+from bot.services.models import default_model
 
 logger = logging.getLogger(__name__)
 
@@ -72,21 +71,12 @@ async def fx_loop() -> None:
         await refresh_fx_rate(force=True)
 
 
-def static_prices() -> dict:
-    return {
-        "bronze": settings.BRONZE_PRICE,
-        "silver": settings.SILVER_PRICE,
-        "gold": settings.GOLD_PRICE,
-    }
-
-
 def plan_usd_cost(plan: str) -> float | None:
     """USD cost of a plan allowance at the default model's per-million rate."""
-    from bot.services.models import plan_allowance
+    from bot.services.models import plan_allowance, model_per_million_cost, default_model
 
     allowance = plan_allowance(plan)
-    entry = models().get(default_model(), {})
-    per_million = entry.get("per_million_cost")
+    per_million = model_per_million_cost(default_model())
     if not allowance or not per_million:
         return None
     try:
@@ -95,10 +85,15 @@ def plan_usd_cost(plan: str) -> float | None:
         return None
 
 
-def plan_price_toman(plan: str) -> int:
-    """Plan price in Tomans, rounded up to 10. Static fallback when data missing."""
+def plan_price_toman(plan: str) -> int | None:
+    """Plan price in Tomans, rounded up to 10.
+
+    Returns None when the price cannot be computed (missing cost data or
+    no cached FX rate). Callers must not sell at None — block the purchase.
+    """
     usd = plan_usd_cost(plan)
     rate = _cache["rate"]
     if usd is None or not rate:
-        return static_prices().get(plan, 0)
+        logger.warning("Cannot price plan %s (usd=%s rate=%s)", plan, usd, rate)
+        return None
     return ceil_to_10(usd * rate)

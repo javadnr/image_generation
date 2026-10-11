@@ -50,6 +50,17 @@ def is_free_model(model_id: str) -> bool:
     return bool(models().get(model_id, {}).get("free", False))
 
 
+def model_per_million_cost(model_id: str) -> float | None:
+    """USD per 1M output tokens. Accepts the known typo spelling too,
+    since hand-edited .env data uses it."""
+    entry = models().get(model_id, {})
+    value = entry.get("per_million_cost", entry.get("per_milion_token_cost"))
+    try:
+        return float(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
 def default_model() -> str:
     for model_id in models():
         if is_free_model(model_id):

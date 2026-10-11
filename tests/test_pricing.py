@@ -22,9 +22,6 @@ def catalog(monkeypatch):
     from bot.config import settings
     monkeypatch.setattr(settings, "MODELS", dict(TEST_MODELS))
     monkeypatch.setattr(settings, "PLAN_TOKENS", dict(TEST_PLAN_TOKENS))
-    monkeypatch.setattr(settings, "BRONZE_PRICE", 99000)
-    monkeypatch.setattr(settings, "SILVER_PRICE", 199000)
-    monkeypatch.setattr(settings, "GOLD_PRICE", 399000)
     yield
 
 
@@ -92,6 +89,17 @@ def test_plan_usd_cost(catalog):
     assert pricing_svc.plan_usd_cost("unknown") is None
 
 
+def test_per_million_cost_typo_spelling(monkeypatch):
+    from bot.config import settings
+    monkeypatch.setattr(settings, "MODELS", {
+        "m": {"free": True, "per_milion_token_cost": 30},
+    })
+    monkeypatch.setattr(settings, "PLAN_TOKENS", {"bronze": 10000})
+    from bot.services.models import model_per_million_cost
+    assert model_per_million_cost("m") == 30.0
+    assert pricing_svc.plan_usd_cost("bronze") == pytest.approx(0.30)
+
+
 @pytest.mark.asyncio
 async def test_refresh_caches_rate(fake_http):
     rate = await pricing_svc.refresh_fx_rate()
@@ -147,9 +155,27 @@ def test_plan_price_rounds_up(catalog):
     assert pricing_svc.plan_price_toman("bronze") == 2520
 
 
-def test_plan_price_falls_back_to_static(catalog):
-    # empty cache and no cost data → static *_PRICE
-    assert pricing_svc.plan_price_toman("bronze") == 99000
-    assert pricing_svc.plan_price_toman("silver") == 199000
-    assert pricing_svc.plan_price_toman("gold") == 399000
-    assert pricing_svc.plan_price_toman("unknown") == 0
+def test_plan_price_none_when_uncomputable(catalog):
+    # empty cache → None (never sell at a guessed price)
+    assert pricing_svc.plan_price_toman("bronze") is None
+    assert pricing_svc.plan_price_toman("unknown") is None
+
+
+def test_plan_price_none_without_cost_data(monkeypatch):
+    from bot.config import settings
+    monkeypatch.setattr(settings, "MODELS", {"bare-model": {"free": True}})
+    monkeypatch.setattr(
+        settings, "PLAN_TOKENS", {"bronze": 10000}
+    )
+    import time as _time
+    pricing_svc._cache.update({"rate": 100000.0, "at": _time.monotonic()})
+    assert pricing_svc.plan_price_toman("bronze") is None
+
+
+def test_purchase_blocked_without_price(monkeypatch):
+    from bot.config import settings
+    from bot.services.payment import _plan_amount
+    monkeypatch.setattr(settings, "MODELS", {"bare-model": {"free": True}})
+    monkeypatch.setattr(settings, "PLAN_TOKENS", {"bronze": 10000})
+    with pytest.raises(ValueError):
+        _plan_amount("bronze")

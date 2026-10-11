@@ -14,7 +14,10 @@ logger = logging.getLogger(__name__)
 
 def _plan_amount(plan: str) -> int:
     from bot.services.pricing import plan_price_toman
-    return plan_price_toman(plan)
+    amount = plan_price_toman(plan)
+    if amount is None:
+        raise ValueError(f"Cannot price plan {plan}: missing cost data or FX rate")
+    return amount
 
 
 def _plan_tokens(plan: str) -> int:

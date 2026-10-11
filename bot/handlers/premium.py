@@ -25,7 +25,9 @@ router = Router()
 TIER_NAMES = {"free": "ندارد", "bronze": "🥉 برنزی", "silver": "🥈 نقره‌ای", "gold": "🥇 طلایی"}
 
 
-def tooman_display(price: int) -> str:
+def tooman_display(price: int | None) -> str:
+    if price is None:
+        return "قیمت نامشخص"
     thousands = price // 1000
     return f"{thousands} هزار تومان"
 
