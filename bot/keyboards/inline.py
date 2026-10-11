@@ -61,21 +61,21 @@ def quality_keyboard(tier: str, current: str) -> InlineKeyboardMarkup:
 
 
 MODEL_OPTIONS = (
-    ("gpt-image-1-mini", "Mini"),
-    ("gpt-image-2.5-flare", "Flare"),
-    ("gpt-image-2.5-sunburst", "Sunburst"),
+    "gpt-image-1-mini",
+    "gpt-image-2.5-flare",
+    "gpt-image-2.5-sunburst",
 )
 MODEL_PREMIUM_ONLY = ("gpt-image-2.5-flare", "gpt-image-2.5-sunburst")
 
 
 def model_keyboard(tier: str, current: str) -> InlineKeyboardMarkup:
     buttons = []
-    for value, label in MODEL_OPTIONS:
+    for value in MODEL_OPTIONS:
         if tier == "free" and value in MODEL_PREMIUM_ONLY:
-            text = f"🔒 {label}"
+            text = f"🔒 {value}"
         else:
             tick = "✅ " if value == current else ""
-            text = f"{tick}{label}"
+            text = f"{tick}{value}"
         buttons.append([InlineKeyboardButton(text=text, callback_data=f"model:{value}")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 

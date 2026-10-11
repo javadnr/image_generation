@@ -45,5 +45,5 @@ async def model_set(callback: CallbackQuery, session):
     except Exception:
         pass
     await callback.answer(
-        texts.MODEL_SET.format(label=texts.MODEL_LABELS[value])
+        texts.MODEL_SET.format(label=value)
     )
