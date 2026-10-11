@@ -12,7 +12,7 @@ from bot.services.payment import (
     create_zarinpal_purchase, verify_zarinpal_payment,
     create_bale_purchase, get_bale_payment_provider,
 )
-from bot.services.pricing import plan_price_toman
+from bot.services.pricing import plan_price_toman, last_known_rate
 from bot.keyboards.inline import premium_menu
 from bot.keyboards.reply import main_menu
 from bot.db.engine import async_session
@@ -32,12 +32,52 @@ def tooman_display(price: int | None) -> str:
     return f"{thousands} هزار تومان"
 
 
+QUALITY_ORDER = ("low", "medium", "high")
+QUALITY_FA = {"low": "پایین", "medium": "متوسط", "high": "بالا"}
+
+
 def _plan_images_text(plan: str, allowance: int) -> str:
     """Approximate image count for a plan allowance (Low-quality basis)."""
     estimate = estimate_tokens(default_model(), "low")
     if estimate:
         return f"• تقریباً {allowance // estimate:,} تصویر"
     return f"• تقریباً {allowance:,} تصویر"
+
+
+def _quality_breakdown(allowance: int) -> str | None:
+    """Per-quality approximate image counts, e.g. '50 پایین | 22 متوسط | 5 بالا'."""
+    parts = []
+    for quality in QUALITY_ORDER:
+        estimate = estimate_tokens(default_model(), quality)
+        if estimate:
+            parts.append(f"{allowance // estimate:,} {QUALITY_FA[quality]}")
+    return " | ".join(parts) if parts else None
+
+
+def _fx_note() -> str | None:
+    rate = last_known_rate()
+    if not rate:
+        return None
+    return (
+        f"💱 قیمت‌ها بر اساس نرخ روز دلار محاسبه شده: 1 دلار = {rate:,.0f} تومان.\n"
+        f"نرخ ارز هر ۵ دقیقه به‌روزرسانی می‌شود."
+    )
+
+
+def _quality_breakdown_text() -> str:
+    lines = []
+    for plan, emoji in (("bronze", "🥉"), ("silver", "🥈"), ("gold", "🥇")):
+        breakdown = _quality_breakdown(plan_allowance(plan))
+        if breakdown:
+            lines.append(f"{emoji} {breakdown}")
+    if not lines:
+        return ""
+    return "📊 تعداد تقریبی تصاویر هر پلن بر اساس کیفیت:\n" + "\n".join(lines) + "\n"
+
+
+def _fx_note_text() -> str:
+    note = _fx_note()
+    return (note + "\n") if note else ""
 
 
 def premium_text(user) -> str:
@@ -65,7 +105,9 @@ def premium_text(user) -> str:
         f"🥇 طلایی — {tooman_display(plan_price_toman('gold'))} 🔥 بیشترین اعتبار\n"
         f"{_plan_images_text('gold', plan_allowance('gold'))}\n\n"
         f"📌 توجه: تعداد تصاویر نمایش‌داده‌شده بر اساس کیفیت پایین است. "
-        f"تولید تصویر با کیفیت بالاتر، از موجودی شما بیشتر کم می‌کند.\n\n"
+        f"تولید تصویر با کیفیت بالاتر، از موجودی شما بیشتر کم می‌کند.\n"
+        f"{_quality_breakdown_text()}\n"
+        f"{_fx_note_text()}\n"
         f"👇 پلن موردنظرت رو انتخاب کن:"
     )
 

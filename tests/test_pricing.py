@@ -10,7 +10,11 @@ TEST_MODELS = {
         "label": "gpt-image-2.5-flare",
         "free": True,
         "per_million_cost": 30,
-        "cost": {"low": {"cost": 0.006, "tokens": 200}},
+        "cost": {
+            "low": {"cost": 0.006, "tokens": 200},
+            "medium": {"cost": 0.0133, "tokens": 443},
+            "high": {"cost": 0.0266, "tokens": 1760},
+        },
     },
 }
 
@@ -78,6 +82,47 @@ def test_ceil_to_10():
     assert pricing_svc.ceil_to_10(0) == 0
     assert pricing_svc.ceil_to_10(1) == 10
     assert pricing_svc.ceil_to_10(30000) == 30000
+    # request examples
+    assert pricing_svc.ceil_to_10(73) == 80
+    assert pricing_svc.ceil_to_10(75) == 80
+    assert pricing_svc.ceil_to_10(78) == 80
+    assert pricing_svc.ceil_to_10(80) == 80
+    assert pricing_svc.ceil_to_10(81) == 90
+
+
+def test_quality_breakdown_math(catalog):
+    from bot.handlers import premium as premium_h
+
+    # 10,000 tokens @ 200/443/1760 per image
+    assert premium_h._quality_breakdown(10000) == "50 پایین | 22 متوسط | 5 بالا"
+    assert premium_h._quality_breakdown(25000) == "125 پایین | 56 متوسط | 14 بالا"
+    assert premium_h._quality_breakdown(60000) == "300 پایین | 135 متوسط | 34 بالا"
+
+
+def test_quality_breakdown_text_lists_all_plans(catalog):
+    from bot.handlers import premium as premium_h
+
+    text = premium_h._quality_breakdown_text()
+    assert "🥉" in text and "🥈" in text and "🥇" in text
+    assert "50 پایین" in text
+
+
+def test_fx_note_shows_cached_rate(catalog):
+    import time as _time
+    from bot.handlers import premium as premium_h
+
+    pricing_svc._cache.update({"rate": 263600.0, "at": _time.monotonic()})
+    note = premium_h._fx_note()
+    assert note is not None
+    assert "263,600" in note
+    assert "۵ دقیقه" in note or "5 دقیقه" in note
+
+
+def test_fx_note_hidden_without_rate(catalog):
+    from bot.handlers import premium as premium_h
+
+    assert premium_h._fx_note() is None
+    assert premium_h._fx_note_text() == ""
 
 
 def test_plan_usd_cost(catalog):

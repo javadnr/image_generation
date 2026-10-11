@@ -42,6 +42,11 @@ def cached_rate() -> float | None:
     return None
 
 
+def last_known_rate() -> float | None:
+    """Most recent rate even if stale (for display). None if never fetched."""
+    return _cache["rate"]
+
+
 async def refresh_fx_rate(force: bool = False) -> float | None:
     """Fetch the USDT/Toman rate unless the cache is fresh (unless forced)."""
     async with _lock:
