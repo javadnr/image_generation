@@ -9,6 +9,7 @@ from bot.services.user import (
     get_tier_users_count, get_tier_images_today, reset_all_daily, set_tier,
 )
 from bot.services import analytics as az
+from bot.services.models import images_per_quality, default_model
 from bot.services.payment import activate_plan, deactivate_plan
 from bot.keyboards.inline import admin_status
 from bot.keyboards.reply import main_menu
@@ -193,12 +194,17 @@ async def activate_cmd(message: Message, session):
     )
 
     expire = user.premium_expire_date.strftime("%Y/%m/%d") if user.premium_expire_date else "—"
+    model = user.image_model or default_model()
+    breakdown = "\n".join(
+        f"• {texts.QUALITY_LABELS[q]}: {count:,} تصویر"
+        for q, count in images_per_quality(user.token_balance or 0, model).items()
+    ) or "—"
     try:
         await message.bot.send_message(
             user_id,
             badge(
                 f"✅ اشتراک {texts.TIER_NAMES_FA[tier]} برای شما فعال شد!\n\n"
-                f"🔢 اعتبار: {user.token_balance:,} توکن\n"
+                f"🖼 تعداد تقریبی تصاویر:\n{breakdown}\n"
                 f"📅 پایان اشتراک: {expire}"
             ),
             reply_markup=main_menu(user),

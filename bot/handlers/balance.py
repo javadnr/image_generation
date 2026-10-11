@@ -32,7 +32,6 @@ async def balance(message: Message, session):
     else:
         balance_tokens = user.token_balance or 0
         model = user.image_model or default_model()
-        quality = user.image_quality or "low"
         estimate = estimate_tokens_for(user)
         per_quality = images_per_quality(balance_tokens, model)
         breakdown = "\n".join(
@@ -41,7 +40,6 @@ async def balance(message: Message, session):
         ) or "—"
         text = texts.QUOTA_REMAINING_TOKENS.format(
             tier=tier_name,
-            balance=f"{balance_tokens:,}",
             model=model,
             breakdown=breakdown,
         )

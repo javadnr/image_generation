@@ -19,8 +19,8 @@ TIER_NAMES_FA = {"bronze": "برنزی", "silver": "نقره‌ای", "gold": "�
 GENERATING = "⏳ در حال تGENERATING..."
 GENERATION_SUCCESS = "✅ تصویر با موفقیت ساخته شد!"
 LIMIT_REACHED_BUY = "⚠️ سقف استفاده شما تمام شده است.\nبرای ساخت تصاویر بیشتر باید اشتراک تهیه کنید 👇"
-INSUFFICIENT_BALANCE = "⚠️ موجودی توکن شما برای ساخت تصویر با این کیفیت کافی نیست.\nبرای ادامه اشتراک تهیه کنید 👇"
-QUOTA_REMAINING_TOKENS = "📊 موجودی شما\n\n📦 پلن: {tier}\n🔢 توکن باقی‌مانده: {balance}\n🤖 مدل: {model}\n🖼 تعداد تقریبی تصاویر باقی‌مانده:\n{breakdown}\n💡 تعداد واقعی بسته به مصرف توکن متفاوت است."
+INSUFFICIENT_BALANCE = "⚠️ موجودی شما برای ساخت تصویر با این کیفیت کافی نیست.\nبرای ادامه اشتراک تهیه کنید 👇"
+QUOTA_REMAINING_TOKENS = "📊 موجودی شما\n\n📦 پلن: {tier}\n🤖 مدل: {model}\n🖼 تعداد تقریبی تصاویر باقی‌مانده:\n{breakdown}\n💡 تعداد واقعی ممکن است متفاوت باشد."
 QUOTA_REMAINING_FREE = "📊 موجودی شما\n\n📦 پلن: رایگان\n🖼 اعتبار باقی‌مانده: {daily_remaining} از {daily_limit}"
 
 # Quality

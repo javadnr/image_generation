@@ -141,13 +141,28 @@ def test_balance_template_renders_breakdown():
 
     rendered = texts.QUOTA_REMAINING_TOKENS.format(
         tier="برنزی",
-        balance="20,000",
         model="gpt-image-2.5-flare",
         breakdown="• پایین: 100 تصویر\n• متوسط: 45 تصویر",
     )
-    assert "20,000" in rendered
     assert "100 تصویر" in rendered
+    assert "توکن" not in rendered
+    assert "token" not in rendered.lower()
     assert len(rendered) < 4096
+
+
+def test_no_token_words_in_user_facing_texts():
+    import bot.texts as texts
+
+    bad = []
+    for name in dir(texts):
+        if name.startswith("__"):
+            continue
+        value = getattr(texts, name)
+        if isinstance(value, str) and (
+            "توکن" in value or "token" in value.lower()
+        ):
+            bad.append(name)
+    assert bad == [], f"user-facing texts mention tokens: {bad}"
 
 
 def test_plan_usd_cost(catalog):

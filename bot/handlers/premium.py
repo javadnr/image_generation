@@ -7,7 +7,9 @@ from bot.services.analytics import (
     log_event, maybe_log_free_limit, PRICING_VIEWED, BUY_SUBSCRIPTION_CLICKED,
     PLAN_SELECTED, PAYMENT_STARTED,
 )
-from bot.services.models import plan_allowance, estimate_tokens, default_model
+from bot.services.models import (
+    plan_allowance, estimate_tokens, default_model, images_per_quality,
+)
 from bot.services.payment import (
     create_zarinpal_purchase, verify_zarinpal_payment,
     create_bale_purchase, get_bale_payment_provider,
@@ -84,10 +86,16 @@ def premium_text(user) -> str:
     if user.tier != "free" and user.premium_expire_date:
         expire = user.premium_expire_date.strftime("%Y/%m/%d")
         remaining = (user.premium_expire_date.date() - datetime.now().date()).days
-        balance = user.token_balance or 0
+        model = user.image_model or default_model()
+        per_quality = images_per_quality(user.token_balance or 0, model)
+        breakdown = "\n".join(
+            f"• {texts.QUALITY_LABELS[q]}: {count:,} تصویر"
+            for q, count in per_quality.items()
+        ) or "—"
         return badge(
             f"{texts.PREMIUM_TITLE}\n\n"
-            f"🔢 توکن باقی‌مانده: {balance:,}\n"
+            f"🤖 مدل: {model}\n"
+            f"🖼 تعداد تقریبی تصاویر باقی‌مانده:\n{breakdown}\n"
             f"📅 تاریخ پایان: {expire}\n"
             f"⏳ روزهای باقی‌مانده: {remaining}"
         )
