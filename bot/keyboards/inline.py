@@ -60,6 +60,25 @@ def quality_keyboard(tier: str, current: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
+MODEL_OPTIONS = (
+    ("gpt-image-2.5-flare", "Flare"),
+    ("gpt-image-2.5-sunburst", "Sunburst"),
+)
+MODEL_PREMIUM_ONLY = ("gpt-image-2.5-sunburst",)
+
+
+def model_keyboard(tier: str, current: str) -> InlineKeyboardMarkup:
+    buttons = []
+    for value, label in MODEL_OPTIONS:
+        if tier == "free" and value in MODEL_PREMIUM_ONLY:
+            text = f"🔒 {label}"
+        else:
+            tick = "✅ " if value == current else ""
+            text = f"{tick}{label}"
+        buttons.append([InlineKeyboardButton(text=text, callback_data=f"model:{value}")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
 def admin_status(bot_enabled: bool) -> InlineKeyboardMarkup:
     toggle_text = "🔴 غیرفعال کردن ربات" if bot_enabled else "🟢 فعال کردن ربات"
     return InlineKeyboardMarkup(inline_keyboard=[

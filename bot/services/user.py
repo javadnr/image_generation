@@ -106,12 +106,21 @@ async def set_generating(session: AsyncSession, user: User, value: bool) -> None
 
 
 VALID_QUALITIES = ("low", "medium", "high")
+VALID_MODELS = ("gpt-image-2.5-flare", "gpt-image-2.5-sunburst")
+MODEL_PREMIUM_ONLY = ("gpt-image-2.5-sunburst",)
 
 
 async def set_quality(session: AsyncSession, user: User, quality: str) -> None:
     if quality not in VALID_QUALITIES:
         raise ValueError(f"Invalid quality: {quality}")
     user.image_quality = quality
+    await session.commit()
+
+
+async def set_model(session: AsyncSession, user: User, model: str) -> None:
+    if model not in VALID_MODELS:
+        raise ValueError(f"Invalid model: {model}")
+    user.image_model = model
     await session.commit()
 
 

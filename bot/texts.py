@@ -11,6 +11,7 @@ MAIN_MENU_GENERATE = "🎨 ساخت تصویر"
 MAIN_MENU_BALANCE = "📊 موجودی"
 MAIN_MENU_PREMIUM = "💎 خرید اشتراک"
 MAIN_MENU_QUALITY = "🖼️ تنظیمات تصویر"
+MAIN_MENU_MODEL = "🤖 انتخاب مدل"
 MAIN_MENU_ADMIN = "📊 وضعیت ربات"
 
 TIER_NAMES_FA = {"bronze": "برنزی", "silver": "نقره‌ای", "gold": "طلایی"}
@@ -28,6 +29,12 @@ QUALITY_TITLE = "کیفیت تصویر خروجی بعدی رو انتخاب ک�
 QUALITY_LABELS = {"low": "پایین", "medium": "متوسط", "high": "بالا"}
 QUALITY_SET = "✅ کیفیت تصویر روی {label} تنظیم شد."
 QUALITY_LOCKED = "🔒 این کیفیت مخصوص کاربران پریمیوم است."
+
+# Model
+MODEL_TITLE = "مدل تولید تصویر رو انتخاب کن:"
+MODEL_LABELS = {"gpt-image-2.5-flare": "Flare", "gpt-image-2.5-sunburst": "Sunburst"}
+MODEL_SET = "✅ مدل تولید تصویر روی {label} تنظیم شد."
+MODEL_LOCKED = "🔒 این مدل مخصوص کاربران پریمیوم است."
 
 # Premium
 PREMIUM_TITLE = "💎 اشتراک پریمیوم"
