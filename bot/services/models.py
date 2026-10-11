@@ -82,8 +82,9 @@ def estimate_tokens(model_id: str | None, quality: str | None) -> int | None:
 
 
 def plan_allowance(plan: str) -> int:
-    """Token allowance granted by a plan. 0 when unconfigured."""
-    try:
-        return int(settings.PLAN_TOKENS.get(plan, 0))
-    except (TypeError, ValueError):
-        return 0
+    """Token allowance granted by a plan (BRONZE/SILVER/GOLD_MAX_TOKEN)."""
+    return {
+        "bronze": settings.BRONZE_MAX_TOKEN,
+        "silver": settings.SILVER_MAX_TOKEN,
+        "gold": settings.GOLD_MAX_TOKEN,
+    }.get(plan, 0)

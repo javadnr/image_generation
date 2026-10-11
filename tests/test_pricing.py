@@ -18,14 +18,16 @@ TEST_MODELS = {
     },
 }
 
-TEST_PLAN_TOKENS = {"bronze": 10000, "silver": 25000, "gold": 60000}
+TEST_PLAN_TOKENS = {"BRONZE_MAX_TOKEN": 10000, "SILVER_MAX_TOKEN": 25000, "GOLD_MAX_TOKEN": 60000}
 
 
 @pytest.fixture
 def catalog(monkeypatch):
     from bot.config import settings
     monkeypatch.setattr(settings, "MODELS", dict(TEST_MODELS))
-    monkeypatch.setattr(settings, "PLAN_TOKENS", dict(TEST_PLAN_TOKENS))
+    monkeypatch.setattr(settings, "BRONZE_MAX_TOKEN", TEST_PLAN_TOKENS["BRONZE_MAX_TOKEN"])
+    monkeypatch.setattr(settings, "SILVER_MAX_TOKEN", TEST_PLAN_TOKENS["SILVER_MAX_TOKEN"])
+    monkeypatch.setattr(settings, "GOLD_MAX_TOKEN", TEST_PLAN_TOKENS["GOLD_MAX_TOKEN"])
     yield
 
 
@@ -75,19 +77,14 @@ def fake_http(monkeypatch):
     return _FakeClient
 
 
-def test_ceil_to_10():
-    assert pricing_svc.ceil_to_10(251) == 260
-    assert pricing_svc.ceil_to_10(264) == 270
-    assert pricing_svc.ceil_to_10(270) == 270
-    assert pricing_svc.ceil_to_10(0) == 0
-    assert pricing_svc.ceil_to_10(1) == 10
-    assert pricing_svc.ceil_to_10(30000) == 30000
-    # request examples
-    assert pricing_svc.ceil_to_10(73) == 80
-    assert pricing_svc.ceil_to_10(75) == 80
-    assert pricing_svc.ceil_to_10(78) == 80
-    assert pricing_svc.ceil_to_10(80) == 80
-    assert pricing_svc.ceil_to_10(81) == 90
+def test_ceil_price_rounds_up_to_10k():
+    assert pricing_svc.ceil_price(0) == 0
+    assert pricing_svc.ceil_price(1) == 10000
+    assert pricing_svc.ceil_price(79080) == 80000
+    assert pricing_svc.ceil_price(197700) == 200000
+    assert pricing_svc.ceil_price(474480) == 480000
+    assert pricing_svc.ceil_price(80000) == 80000
+    assert pricing_svc.ceil_price(80001) == 90000
 
 
 def test_quality_breakdown_math(catalog):
@@ -139,7 +136,7 @@ def test_per_million_cost_typo_spelling(monkeypatch):
     monkeypatch.setattr(settings, "MODELS", {
         "m": {"free": True, "per_milion_token_cost": 30},
     })
-    monkeypatch.setattr(settings, "PLAN_TOKENS", {"bronze": 10000})
+    monkeypatch.setattr(settings, "BRONZE_MAX_TOKEN", 10000)
     from bot.services.models import model_per_million_cost
     assert model_per_million_cost("m") == 30.0
     assert pricing_svc.plan_usd_cost("bronze") == pytest.approx(0.30)
@@ -186,18 +183,18 @@ def test_plan_price_uses_cache_no_http(catalog, monkeypatch):
 
     monkeypatch.setattr(pricing_svc.httpx, "AsyncClient", _no_http)
 
-    # 0.30 USD * 100,000 = 30,000 → already a multiple of 10
+    # 0.30 USD * 100,000 = 30,000 → ceil to 10k
     assert pricing_svc.plan_price_toman("bronze") == 30000
-    # 0.75 * 100,000 = 75,000
-    assert pricing_svc.plan_price_toman("silver") == 75000
-    # 1.80 * 100,000 = 180,000
+    # 0.75 * 100,000 = 75,000 → ceil to 10k
+    assert pricing_svc.plan_price_toman("silver") == 80000
+    # 1.80 * 100,000 = 180,000 → already a multiple of 10k
     assert pricing_svc.plan_price_toman("gold") == 180000
 
 
 def test_plan_price_rounds_up(catalog):
     pricing_svc._cache.update({"rate": 8377.0, "at": time.monotonic()})
-    # 0.30 * 8377 = 2513.1 → 2520
-    assert pricing_svc.plan_price_toman("bronze") == 2520
+    # 0.30 * 8377 = 2513.1 → 10000
+    assert pricing_svc.plan_price_toman("bronze") == 10000
 
 
 def test_plan_price_none_when_uncomputable(catalog):
@@ -210,7 +207,7 @@ def test_plan_price_none_without_cost_data(monkeypatch):
     from bot.config import settings
     monkeypatch.setattr(settings, "MODELS", {"bare-model": {"free": True}})
     monkeypatch.setattr(
-        settings, "PLAN_TOKENS", {"bronze": 10000}
+        settings, "BRONZE_MAX_TOKEN", 10000
     )
     import time as _time
     pricing_svc._cache.update({"rate": 100000.0, "at": _time.monotonic()})
@@ -221,6 +218,6 @@ def test_purchase_blocked_without_price(monkeypatch):
     from bot.config import settings
     from bot.services.payment import _plan_amount
     monkeypatch.setattr(settings, "MODELS", {"bare-model": {"free": True}})
-    monkeypatch.setattr(settings, "PLAN_TOKENS", {"bronze": 10000})
+    monkeypatch.setattr(settings, "BRONZE_MAX_TOKEN", 10000)
     with pytest.raises(ValueError):
         _plan_amount("bronze")

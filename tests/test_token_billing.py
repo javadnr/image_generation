@@ -31,7 +31,7 @@ TEST_MODELS = {
     },
 }
 
-TEST_PLAN_TOKENS = {"bronze": 10000, "silver": 25000, "gold": 60000}
+TEST_PLAN_TOKENS = {"BRONZE_MAX_TOKEN": 10000, "SILVER_MAX_TOKEN": 25000, "GOLD_MAX_TOKEN": 60000}
 
 
 @pytest.fixture(scope="session")
@@ -64,7 +64,9 @@ async def db():
 def catalog(monkeypatch):
     from bot.config import settings
     monkeypatch.setattr(settings, "MODELS", TEST_MODELS)
-    monkeypatch.setattr(settings, "PLAN_TOKENS", dict(TEST_PLAN_TOKENS))
+    monkeypatch.setattr(settings, "BRONZE_MAX_TOKEN", TEST_PLAN_TOKENS["BRONZE_MAX_TOKEN"])
+    monkeypatch.setattr(settings, "SILVER_MAX_TOKEN", TEST_PLAN_TOKENS["SILVER_MAX_TOKEN"])
+    monkeypatch.setattr(settings, "GOLD_MAX_TOKEN", TEST_PLAN_TOKENS["GOLD_MAX_TOKEN"])
     return TEST_MODELS
 
 

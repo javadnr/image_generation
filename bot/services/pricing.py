@@ -31,9 +31,14 @@ _cache: dict = {"rate": None, "at": 0.0}
 _lock = asyncio.Lock()
 
 
-def ceil_to_10(amount) -> int:
-    """Round up to the nearest multiple of 10: 251->260, 264->270, 270->270."""
-    return int(math.ceil(float(amount) / 10) * 10)
+# Final Toman prices are always rounded UP to this unit, so the figures
+# shown in the bot (in thousands) are exact multiples of 10.
+ROUND_UNIT = 10_000
+
+
+def ceil_price(amount) -> int:
+    """Round UP to the nearest ROUND_UNIT: 79080->80000, 80000->80000."""
+    return int(math.ceil(float(amount) / ROUND_UNIT) * ROUND_UNIT)
 
 
 def cached_rate() -> float | None:
@@ -91,7 +96,7 @@ def plan_usd_cost(plan: str) -> float | None:
 
 
 def plan_price_toman(plan: str) -> int | None:
-    """Plan price in Tomans, rounded up to 10.
+    """Plan price in Tomans, rounded UP to the nearest ROUND_UNIT.
 
     Returns None when the price cannot be computed (missing cost data or
     no cached FX rate). Callers must not sell at None — block the purchase.
@@ -101,4 +106,4 @@ def plan_price_toman(plan: str) -> int | None:
     if usd is None or not rate:
         logger.warning("Cannot price plan %s (usd=%s rate=%s)", plan, usd, rate)
         return None
-    return ceil_to_10(usd * rate)
+    return ceil_price(usd * rate)

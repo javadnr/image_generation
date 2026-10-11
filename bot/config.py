@@ -23,15 +23,14 @@ class Settings(BaseSettings):
     BRONZE_LIMIT: int = 10
     SILVER_LIMIT: int = 25
     GOLD_LIMIT: int = 50
-    BRONZE_MAX_LIMIT: int = 100
-    SILVER_MAX_LIMIT: int = 300
-    GOLD_MAX_LIMIT: int = 600
+    BRONZE_MAX_TOKEN: int = 10000
+    SILVER_MAX_TOKEN: int = 25000
+    GOLD_MAX_TOKEN: int = 60000
     BOT_ENABLED: bool = True
     REPORT_CHANNEL_ID: int | None = None
     PROCESSED_REQUESTS_CHANNEL_ID: int | None = None
     REQUIRED_CHANNELS: dict[str, str] = {}
     MODELS: dict = {}
-    PLAN_TOKENS: dict = {}
     BADGE: str = "@kiteck_TM"
     ZARINPAL_API_URL: str = ""
     ZARINPAL_PROJECT_ID: int = 0
@@ -79,15 +78,6 @@ class Settings(BaseSettings):
                 return {}
             return json.loads(v)
         return v or {}
-
-    @validator("PLAN_TOKENS", pre=True)
-    def parse_plan_tokens(cls, v):
-        if isinstance(v, str):
-            v = v.strip()
-            if not v:
-                return {}
-            return {k: int(x) for k, x in json.loads(v).items()}
-        return {k: int(x) for k, x in (v or {}).items()}
 
     class Config:
         env_file = ".env"
