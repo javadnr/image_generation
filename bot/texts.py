@@ -32,7 +32,7 @@ QUALITY_LOCKED = "🔒 این کیفیت مخصوص کاربران پریمیو�
 
 # Model
 MODEL_TITLE = "مدل تولید تصویر رو انتخاب کن:"
-MODEL_LABELS = {"gpt-image-2.5-flare": "Flare", "gpt-image-2.5-sunburst": "Sunburst"}
+MODEL_LABELS = {"gpt-image-1-mini": "Mini", "gpt-image-2.5-flare": "Flare", "gpt-image-2.5-sunburst": "Sunburst"}
 MODEL_SET = "✅ مدل تولید تصویر روی {label} تنظیم شد."
 MODEL_LOCKED = "🔒 این مدل مخصوص کاربران پریمیوم است."
 

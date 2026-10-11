@@ -9,7 +9,7 @@ import bot.texts as texts
 
 router = Router()
 
-DEFAULT_MODEL = "gpt-image-2.5-flare"
+DEFAULT_MODEL = "gpt-image-1-mini"
 
 
 def _current_model(user) -> str:

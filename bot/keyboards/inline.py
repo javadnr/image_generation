@@ -61,10 +61,11 @@ def quality_keyboard(tier: str, current: str) -> InlineKeyboardMarkup:
 
 
 MODEL_OPTIONS = (
+    ("gpt-image-1-mini", "Mini"),
     ("gpt-image-2.5-flare", "Flare"),
     ("gpt-image-2.5-sunburst", "Sunburst"),
 )
-MODEL_PREMIUM_ONLY = ("gpt-image-2.5-sunburst",)
+MODEL_PREMIUM_ONLY = ("gpt-image-2.5-flare", "gpt-image-2.5-sunburst")
 
 
 def model_keyboard(tier: str, current: str) -> InlineKeyboardMarkup:

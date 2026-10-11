@@ -46,12 +46,12 @@ def _callbacks(kb):
 
 
 @pytest.mark.asyncio
-async def test_model_defaults_to_flare(db):
+async def test_model_defaults_to_mini(db):
     user = User(telegram_id=911)
     db.add(user)
     await db.flush()
     await db.refresh(user)
-    assert user.image_model == "gpt-image-2.5-flare"
+    assert user.image_model == "gpt-image-1-mini"
 
 
 @pytest.mark.asyncio
@@ -68,11 +68,13 @@ async def test_set_model_persists_and_rejects_invalid(db):
 
 
 def test_free_user_keyboard_tick_and_lock():
-    kb = model_keyboard("free", "gpt-image-2.5-flare")
+    kb = model_keyboard("free", "gpt-image-1-mini")
     texts = _texts(kb)
     assert texts[0].startswith("✅ ")
     assert texts[1].startswith("🔒 ")
+    assert texts[2].startswith("🔒 ")
     assert _callbacks(kb) == [
+        "model:gpt-image-1-mini",
         "model:gpt-image-2.5-flare",
         "model:gpt-image-2.5-sunburst",
     ]
@@ -82,7 +84,8 @@ def test_premium_keyboard_tick_no_locks():
     kb = model_keyboard("gold", "gpt-image-2.5-sunburst")
     texts = _texts(kb)
     assert not texts[0].startswith("✅ ")
-    assert texts[1].startswith("✅ ")
+    assert not texts[1].startswith("✅ ")
+    assert texts[2].startswith("✅ ")
     assert not any(t.startswith("🔒 ") for t in texts)
 
 
