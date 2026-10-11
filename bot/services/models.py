@@ -19,6 +19,7 @@ FALLBACK_MODELS = {
     "gpt-image-2.5-flare": {
         "label": "gpt-image-2.5-flare",
         "free": True,
+        "per_million_cost": 30,
         "cost": {
             "low": {"cost": 0.006, "tokens": 200},
             "medium": {"cost": 0.0133, "tokens": 443},
@@ -28,6 +29,7 @@ FALLBACK_MODELS = {
     "gpt-image-2.5-sunburst": {
         "label": "gpt-image-2.5-sunburst",
         "free": False,
+        "per_million_cost": 30,
     },
 }
 

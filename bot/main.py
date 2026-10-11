@@ -34,6 +34,9 @@ async def on_startup():
             await session.commit()
 
     init_queues()
+    from bot.services.pricing import refresh_fx_rate, fx_loop
+    await refresh_fx_rate()
+    asyncio.create_task(fx_loop())
     logger.info("Bot started (%s). Bot enabled: %s", settings.API_SERVER, settings.BOT_ENABLED)
 
 

@@ -262,5 +262,5 @@ async def test_new_link_returns_correct_amount(db, mock_zarinpal):
     from bot.services.payment import create_zarinpal_purchase
     result = await create_zarinpal_purchase(db, user, "silver")
 
-    from bot.services.payment import PLAN_PRICES
-    assert result["amount_toman"] == PLAN_PRICES["silver"]
+    from bot.services.pricing import plan_price_toman
+    assert result["amount_toman"] == plan_price_toman("silver")

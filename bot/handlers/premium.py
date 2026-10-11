@@ -2,7 +2,7 @@ from datetime import datetime
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from bot.services.user import get_or_create_user, get_tier_limit
-from bot.services.report import send_premium_report, TIER_PRICES
+from bot.services.report import send_premium_report
 from bot.services.analytics import (
     log_event, maybe_log_free_limit, PRICING_VIEWED, BUY_SUBSCRIPTION_CLICKED,
     PLAN_SELECTED, PAYMENT_STARTED,
@@ -11,8 +11,8 @@ from bot.services.models import plan_allowance, estimate_tokens, default_model
 from bot.services.payment import (
     create_zarinpal_purchase, verify_zarinpal_payment,
     create_bale_purchase, get_bale_payment_provider,
-    PLAN_PRICES,
 )
+from bot.services.pricing import plan_price_toman
 from bot.keyboards.inline import premium_menu
 from bot.keyboards.reply import main_menu
 from bot.db.engine import async_session
@@ -56,11 +56,11 @@ def premium_text(user) -> str:
         f"📅 همه پلن‌ها ماهانه هستند.\n\n"
         f"🆓 پلن رایگان\n"
         f"• {get_tier_limit('free')} تصویر رایگان\n\n"
-        f"🥉 برنزی — {tooman_display(settings.BRONZE_PRICE)}\n"
+        f"🥉 برنزی — {tooman_display(plan_price_toman('bronze'))}\n"
         f"{_plan_images_text('bronze', plan_allowance('bronze'))}\n\n"
-        f"🥈 نقره‌ای — {tooman_display(settings.SILVER_PRICE)} ⭐ محبوب‌ترین\n"
+        f"🥈 نقره‌ای — {tooman_display(plan_price_toman('silver'))} ⭐ محبوب‌ترین\n"
         f"{_plan_images_text('silver', plan_allowance('silver'))}\n\n"
-        f"🥇 طلایی — {tooman_display(settings.GOLD_PRICE)} 🔥 بیشترین اعتبار\n"
+        f"🥇 طلایی — {tooman_display(plan_price_toman('gold'))} 🔥 بیشترین اعتبار\n"
         f"{_plan_images_text('gold', plan_allowance('gold'))}\n\n"
         f"📌 توجه: تعداد تصاویر نمایش‌داده‌شده بر اساس کیفیت پایین است. "
         f"تولید تصویر با کیفیت بالاتر، از موجودی شما بیشتر کم می‌کند.\n\n"
@@ -101,7 +101,7 @@ async def buy_tier(callback: CallbackQuery, session):
         return
 
     user = await get_or_create_user(session, callback.from_user.id)
-    await log_event(session, user, PLAN_SELECTED, {"plan": tier, "price": PLAN_PRICES[tier]})
+    await log_event(session, user, PLAN_SELECTED, {"plan": tier, "price": plan_price_toman(tier)})
 
     try:
         if settings.API_SERVER == "bale":

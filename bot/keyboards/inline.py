@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from bot.config import settings
-from bot.services.report import TIER_PRICES
 from bot.services.models import model_ids, model_label, is_free_model
+from bot.services.pricing import plan_price_toman
 import bot.texts as texts
 
 
@@ -30,7 +30,7 @@ def premium_menu(user) -> InlineKeyboardMarkup:
     if user.tier == "free":
         tier_tags = {"bronze": "", "silver": "⭐ محبوب‌ترین", "gold": "🔥 بیشترین اعتبار"}
         for tier, emoji in [("bronze", "🥉"), ("silver", "🥈"), ("gold", "🥇")]:
-            price = TIER_PRICES.get(tier, 0)
+            price = plan_price_toman(tier)
             tag = tier_tags[tier]
             buttons.append([InlineKeyboardButton(
                 text=f"{emoji} {texts.TIER_NAMES_FA[tier]} — {to_persian_digits(price // 1000)} هزار تومان {tag}",

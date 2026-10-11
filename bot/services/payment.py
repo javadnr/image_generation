@@ -12,11 +12,10 @@ from bot.services.bale_payment import BalePaymentProvider
 
 logger = logging.getLogger(__name__)
 
-PLAN_PRICES = {
-    "bronze": settings.BRONZE_PRICE,
-    "silver": settings.SILVER_PRICE,
-    "gold": settings.GOLD_PRICE,
-}
+def _plan_amount(plan: str) -> int:
+    from bot.services.pricing import plan_price_toman
+    return plan_price_toman(plan)
+
 
 def _plan_tokens(plan: str) -> int:
     from bot.services.models import plan_allowance
@@ -91,7 +90,7 @@ async def create_zarinpal_purchase(session: AsyncSession, user: User, plan: str)
         await session.delete(tx)
     await session.commit()
 
-    amount = PLAN_PRICES[plan]
+    amount = _plan_amount(plan)
     client = get_zarinpal_client()
     authority, payment_link = await client.request_payment(amount, f"اشتراک {plan}")
 
@@ -168,7 +167,7 @@ async def create_bale_purchase(session: AsyncSession, user: User, plan: str) -> 
         await session.delete(tx)
     await session.commit()
 
-    amount = PLAN_PRICES[plan]
+    amount = _plan_amount(plan)
     tx = Transaction(
         id=str(uuid.uuid4()),
         user_id=user.id,
