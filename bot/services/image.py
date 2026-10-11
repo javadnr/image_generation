@@ -3,6 +3,7 @@ import logging
 import httpx
 from openai import AsyncOpenAI
 from bot.config import settings
+from bot.services.models import default_model
 
 log = logging.getLogger(__name__)
 
@@ -54,4 +55,19 @@ async def generate_image(prompt: str, tier: str, width: int = 1024, height: int 
         "Image generated: model=%s size=%dx%d tokens=%s",
         model, width, height, tokens,
     )
+    return await _extract_image_bytes(img), tokens
+
+
+async def edit_image(file_path: str, prompt: str, model: str | None = None) -> tuple[bytes, int | None]:
+    model = model or default_model()
+    log.info("Editing image: model=%s file=%s prompt=%s", model, file_path, prompt[:80])
+    with open(file_path, "rb") as f:
+        result = await client.images.edit(
+            model=model,
+            image=f,
+            prompt=prompt,
+        )
+    img = result.data[0]
+    tokens = _extract_tokens(result)
+    log.info("Image edited: model=%s tokens=%s", model, tokens)
     return await _extract_image_bytes(img), tokens

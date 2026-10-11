@@ -232,3 +232,41 @@ def test_estimate_helper(catalog):
     assert models_svc.estimate_tokens("gpt-image-2.5-flare", "high") == 1760
     assert models_svc.estimate_tokens("unknown-model", "low") is None
     assert models_svc.estimate_tokens("gpt-image-2.5-flare", "ultra") is None
+
+
+def test_edit_cost_default():
+    from bot.config import settings
+    assert settings.IMAGE_EDIT_COST_TOKENS > 0
+
+
+def test_get_edit_cost_respects_env(monkeypatch):
+    from bot.config import settings
+    monkeypatch.setattr(settings, "IMAGE_EDIT_COST_TOKENS", 1234)
+    assert user_svc.get_edit_cost() == 1234
+
+
+@pytest.mark.asyncio
+async def test_has_edit_balance(db, monkeypatch):
+    from bot.config import settings
+    monkeypatch.setattr(settings, "IMAGE_EDIT_COST_TOKENS", 4000)
+    free = await _make_user(db, 2001, tier="free", token_balance=99999)
+    poor = await _make_user(db, 2002, tier="bronze", token_balance=3999)
+    exact = await _make_user(db, 2003, tier="silver", token_balance=4000)
+    rich = await _make_user(db, 2004, tier="gold", token_balance=50000)
+    await db.commit()
+
+    assert user_svc.has_edit_balance(free) is False
+    assert user_svc.has_edit_balance(poor) is False
+    assert user_svc.has_edit_balance(exact) is True
+    assert user_svc.has_edit_balance(rich) is True
+
+
+@pytest.mark.asyncio
+async def test_edit_deducts_fixed_cost(db, monkeypatch):
+    from bot.config import settings
+    monkeypatch.setattr(settings, "IMAGE_EDIT_COST_TOKENS", 4000)
+    user = await _make_user(db, 2005, tier="bronze", token_balance=10000)
+    await db.commit()
+
+    remaining = await user_svc.deduct_tokens(db, user, user_svc.get_edit_cost())
+    assert remaining == 6000

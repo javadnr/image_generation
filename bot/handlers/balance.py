@@ -1,7 +1,7 @@
 from aiogram import Router, F
 from aiogram.types import Message
 from bot.services.user import (
-    get_or_create_user, check_and_reset_daily, get_remaining, get_tier_limit,
+    get_or_create_user, get_remaining, get_tier_limit,
     estimate_tokens_for,
 )
 from bot.services.models import default_model, images_per_quality
@@ -18,7 +18,6 @@ TIER_NAMES_FA = {"free": "آزاد", "bronze": "برنزی", "silver": "نقره
 @router.message(F.text == texts.MAIN_MENU_BALANCE)
 async def balance(message: Message, session):
     user = await get_or_create_user(session, message.from_user.id)
-    user = await check_and_reset_daily(session, user)
     tier_name = TIER_NAMES_FA.get(user.tier, "آزاد")
 
     if user.tier == "free":

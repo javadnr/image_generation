@@ -2,7 +2,7 @@ import logging
 from aiogram import Router, F
 from aiogram.types import Message, BufferedInputFile
 from bot.config import settings
-from bot.services.user import get_or_create_user, check_and_reset_daily, can_generate, consume_quota, deduct_tokens, set_generating, get_remaining
+from bot.services.user import get_or_create_user, can_generate, consume_quota, deduct_tokens, set_generating, get_remaining
 from bot.services.analytics import (
     log_event, maybe_log_first_generation_start,
     IMAGE_GENERATION_STARTED, IMAGE_GENERATION_SUCCESS, IMAGE_GENERATION_FAILED,
@@ -39,7 +39,9 @@ async def generate_prompt(message: Message, session):
         "ایده یا چیزی که می‌خوای ببینی رو به زبان طبیعی برام بنویس تا برات به تصویر تبدیلش کنم ✨\n\n"
         "مثلاً:\n"
         "«یک شهر آینده‌نگر در شب، باران، نورهای نئون، سبک سینمایی و واقع‌گرایانه»\n\n"
-        "💡 هرچه توضیحت دقیق‌تر باشه، نتیجه به چیزی که می‌خوای نزدیک‌تر می‌شه."
+        "💡 هرچه توضیحت دقیق‌تر باشه، نتیجه به چیزی که می‌خوای نزدیک‌تر می‌شه.\n\n"
+        "📷 ویرایش عکس (مخصوص کاربران پریمیوم 💎):\n"
+        "عکست رو بفرست و توی کپشن بنویس چه تغییری می‌خوای؛ مثلاً «پس‌زمینه رو ساحل کن»."
     ))
 
 
@@ -49,7 +51,6 @@ async def handle_generate(message: Message, session):
         return
 
     user = await get_or_create_user(session, message.from_user.id)
-    user = await check_and_reset_daily(session, user)
 
     if user.is_generating:
         await message.answer(badge("⏳ لطفاً صبر کنید. تصویر قبلی در حال ساخت است."))

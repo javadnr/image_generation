@@ -54,7 +54,8 @@ async def test_free_credit_never_resets(db):
     user = await _make_user(db, 801, tier="free", daily_used=2, last_reset=yesterday)
     await db.commit()
 
-    user = await user_svc.check_and_reset_daily(db, user)
+    await user_svc.reset_all_daily(db)
+    await db.refresh(user)
     assert user.daily_used == 2
     assert not await user_svc.can_generate(db, user)
 

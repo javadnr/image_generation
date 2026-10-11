@@ -11,12 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 def get_tier_limit(tier: str) -> int:
-    return {
-        "free": settings.FREE_LIMIT,
-        "bronze": settings.BRONZE_LIMIT,
-        "silver": settings.SILVER_LIMIT,
-        "gold": settings.GOLD_LIMIT,
-    }.get(tier, settings.FREE_LIMIT)
+    # Only the free tier uses image-count limits now; premium is token-based.
+    return settings.FREE_LIMIT if tier == "free" else 0
 
 
 async def get_or_create_user(session: AsyncSession, telegram_id: int) -> User:
@@ -30,21 +26,7 @@ async def get_or_create_user(session: AsyncSession, telegram_id: int) -> User:
     return user
 
 
-async def check_and_reset_daily(session: AsyncSession, user: User) -> User:
-    if user.tier == "free":
-        # Free credit is one-time, never resets.
-        return user
-    today = today_in_tehran()
-    if user.last_reset_date != today:
-        user.daily_used = 0
-        user.last_reset_date = today
-        await session.commit()
-        await session.refresh(user)
-    return user
-
-
 async def can_generate(session: AsyncSession, user: User) -> bool:
-    user = await check_and_reset_daily(session, user)
     if user.tier == "free":
         return user.daily_used < get_tier_limit("free")
     estimate = estimate_tokens_for(user)
@@ -77,15 +59,23 @@ async def deduct_tokens(session: AsyncSession, user: User, amount: int | None) -
 
 async def consume_quota(session: AsyncSession, user: User) -> None:
     user.daily_used += 1
-    if user.tier != "free":
-        user.total_used += 1
     await session.commit()
 
 
 async def get_remaining(session: AsyncSession, user: User) -> int:
-    user = await check_and_reset_daily(session, user)
     limit = get_tier_limit(user.tier)
     return max(0, limit - user.daily_used)
+
+
+def get_edit_cost() -> int:
+    return settings.IMAGE_EDIT_COST_TOKENS
+
+
+def has_edit_balance(user: User) -> bool:
+    """Premium-only gate helper: enough balance for one fixed-cost edit."""
+    if user.tier == "free":
+        return False
+    return (user.token_balance or 0) >= get_edit_cost()
 
 
 async def set_tier(session: AsyncSession, telegram_id: int, tier: str) -> User | None:

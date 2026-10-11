@@ -28,11 +28,14 @@ bot/
 ### Image Generation
 1. User sends text → middleware checks: private chat, bot enabled, force-join
 2. Handler checks: quota available, user not already generating
-3. Acquire tier semaphore → call OpenAI API → send photo → consume quota (no disk saving)
+3. Acquire tier semaphore → call OpenAI API → send photo → deduct tokens (premium) / consume free credit
 4. On error: show Persian error, do NOT consume quota
 
+### Image Edit (premium only)
+User sends photo with caption → premium + balance check (fixed `IMAGE_EDIT_COST_TOKENS`) → download to temp → call OpenAI edit API → deduct cost only on success → send result + original to channel, delete temp
+
 ### Daily Reset
-APScheduler cron at Iran midnight (IRST). Resets `daily_used` for premium users only (free credit is one-time).
+No automatic reset. Free credit is one-time; premium uses token balances. Admin "reset daily" button resets free `daily_used`.
 
 ## DB Schema
 

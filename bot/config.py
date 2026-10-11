@@ -20,9 +20,7 @@ class Settings(BaseSettings):
     SILVER_QUEUE_SIZE: int = 25
     GOLD_QUEUE_SIZE: int = 0
     FREE_LIMIT: int = 2
-    BRONZE_LIMIT: int = 10
-    SILVER_LIMIT: int = 25
-    GOLD_LIMIT: int = 50
+    IMAGE_EDIT_COST_TOKENS: int = 4000
     BRONZE_MAX_TOKEN: int = 10000
     SILVER_MAX_TOKEN: int = 25000
     GOLD_MAX_TOKEN: int = 60000
