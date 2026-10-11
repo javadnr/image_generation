@@ -60,3 +60,17 @@ def model_cost(model_id: str, quality: str) -> tuple:
     """Return (cost, tokens) for a model+quality, or (None, None) if unknown."""
     entry = models().get(model_id, {}).get("cost", {}).get(quality, {})
     return entry.get("cost"), entry.get("tokens")
+
+
+def estimate_tokens(model_id: str | None, quality: str | None) -> int | None:
+    """Estimated output tokens for a model+quality, or None if unknown."""
+    _, tokens = model_cost(model_id or default_model(), quality or "low")
+    return tokens if isinstance(tokens, int) else None
+
+
+def plan_allowance(plan: str) -> int:
+    """Token allowance granted by a plan. 0 when unconfigured."""
+    try:
+        return int(settings.PLAN_TOKENS.get(plan, 0))
+    except (TypeError, ValueError):
+        return 0

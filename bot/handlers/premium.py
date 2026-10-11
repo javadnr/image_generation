@@ -1,16 +1,17 @@
 from datetime import datetime
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-from bot.services.user import get_or_create_user, get_tier_limit, get_tier_max_limit
+from bot.services.user import get_or_create_user, get_tier_limit
 from bot.services.report import send_premium_report, TIER_PRICES
 from bot.services.analytics import (
     log_event, maybe_log_free_limit, PRICING_VIEWED, BUY_SUBSCRIPTION_CLICKED,
     PLAN_SELECTED, PAYMENT_STARTED,
 )
+from bot.services.models import plan_allowance, estimate_tokens, default_model
 from bot.services.payment import (
     create_zarinpal_purchase, verify_zarinpal_payment,
     create_bale_purchase, get_bale_payment_provider,
-    PLAN_LIMITS, PLAN_MAX_LIMITS, PLAN_PRICES,
+    PLAN_PRICES,
 )
 from bot.keyboards.inline import premium_menu
 from bot.keyboards.reply import main_menu
@@ -29,28 +30,25 @@ def tooman_display(price: int) -> str:
     return f"{thousands} هزار تومان"
 
 
+def _plan_images_text(plan: str, allowance: int) -> str:
+    """Approximate low-quality image count for a plan allowance."""
+    estimate = estimate_tokens(default_model(), "low")
+    if estimate:
+        return f"• تقریباً {allowance // estimate:,} تصویر با کیفیت پایین"
+    return f"• {allowance:,} توکن"
+
+
 def premium_text(user) -> str:
     if user.tier != "free" and user.premium_expire_date:
         expire = user.premium_expire_date.strftime("%Y/%m/%d")
         remaining = (user.premium_expire_date.date() - datetime.now().date()).days
-        daily = get_tier_limit(user.tier)
-        max_limit = get_tier_max_limit(user.tier)
-        total_remaining = max_limit - user.total_used if max_limit else "∞"
+        balance = user.token_balance or 0
         return badge(
             f"{texts.PREMIUM_TITLE}\n\n"
-            f"📊 سقف روزانه: {daily} تصویر\n"
-            f"📊 سقف کل: {total_remaining} از {max_limit} تصویر\n"
+            f"🔢 توکن باقی‌مانده: {balance:,}\n"
             f"📅 تاریخ پایان: {expire}\n"
             f"⏳ روزهای باقی‌مانده: {remaining}"
         )
-
-    bronze_daily = get_tier_limit("bronze")
-    silver_daily = get_tier_limit("silver")
-    gold_daily = get_tier_limit("gold")
-
-    bronze_max = settings.BRONZE_MAX_LIMIT
-    silver_max = settings.SILVER_MAX_LIMIT
-    gold_max = settings.GOLD_MAX_LIMIT
 
     return badge(
         f"💎 پلن‌های پریمیوم\n\n"
@@ -59,15 +57,15 @@ def premium_text(user) -> str:
         f"🆓 پلن رایگان\n"
         f"• {get_tier_limit('free')} تصویر رایگان\n\n"
         f"🥉 برنزی — {tooman_display(settings.BRONZE_PRICE)}\n"
-        f"• روزانه تا {bronze_daily} تصویر\n"
-        f"• حداکثر {bronze_max} تصویر\n\n"
+        f"• {plan_allowance('bronze'):,} توکن\n"
+        f"{_plan_images_text('bronze', plan_allowance('bronze'))}\n\n"
         f"🥈 نقره‌ای — {tooman_display(settings.SILVER_PRICE)} ⭐ محبوب‌ترین\n"
-        f"• روزانه تا {silver_daily} تصویر\n"
-        f"• حداکثر {silver_max} تصویر\n\n"
+        f"• {plan_allowance('silver'):,} توکن\n"
+        f"{_plan_images_text('silver', plan_allowance('silver'))}\n\n"
         f"🥇 طلایی — {tooman_display(settings.GOLD_PRICE)} 🔥 بیشترین اعتبار\n"
-        f"• روزانه تا {gold_daily} تصویر\n"
-        f"• حداکثر {gold_max} تصویر\n\n"
-        f"💡 همه تصاویر با مدل‌های پیشرفته OpenAI تولید می‌شوند.\n\n"
+        f"• {plan_allowance('gold'):,} توکن\n"
+        f"{_plan_images_text('gold', plan_allowance('gold'))}\n\n"
+        f"💡 تعداد واقعی تصاویر بسته به مدل، کیفیت و مصرف توکن متفاوت است.\n\n"
         f"👇 پلن موردنظرت رو انتخاب کن:"
     )
 
@@ -78,7 +76,7 @@ async def answer_quota_exceeded(message: Message, session, user) -> None:
     if user.tier == "free":
         await message.answer(badge(texts.LIMIT_REACHED_BUY))
     else:
-        await message.answer(badge(texts.QUOTA_EXCEEDED))
+        await message.answer(badge(texts.INSUFFICIENT_BALANCE))
     await message.answer(premium_text(user), reply_markup=premium_menu(user))
 
 
@@ -146,12 +144,12 @@ async def buy_tier(callback: CallbackQuery, session):
                 [InlineKeyboardButton(text="✅ پرداخت را انجام دادم", callback_data=f"checkpay:{tx_id}")],
             ])
 
+            allowance = plan_allowance(tier)
             text = (
                 f"📋 پلن انتخابی: {texts.TIER_NAMES_FA[tier]}\n"
                 f"💰 مبلغ: {amount:,} تومان\n"
                 f"📅 مدت: {settings.PREMIUM_DURATION_DAYS} روز\n"
-                f"📊 سقف روزانه: {PLAN_LIMITS[tier]} تصویر\n"
-                f"📊 سقف کل: {PLAN_MAX_LIMITS[tier]} تصویر\n\n"
+                f"🔢 اعتبار: {allowance:,} توکن\n\n"
                 f"💡 روی دکمه پرداخت کلیک کنید و پس از تکمیل، دکمه «پرداخت را انجام دادم» را بزنید.\n"
                 f"⏳ لینک پرداخت به مدت {remaining} دقیقه معتبر است."
             )
@@ -171,14 +169,12 @@ async def handle_check_payment(callback: CallbackQuery, session):
 
     if result["success"]:
         plan = result["plan"]
-        daily = result["daily_limit"]
-        max_limit = result["max_limit"]
+        granted = result.get("tokens_granted", 0)
         expire = result["expires_at"]
 
         text = (
             f"✅ اشتراک {texts.TIER_NAMES_FA[plan]} فعال شد!\n\n"
-            f"📊 سقف روزانه: {daily} تصویر\n"
-            f"📊 سقف کل: {max_limit} تصویر\n"
+            f"🔢 اعتبار: {granted:,} توکن\n"
             f"📅 پایان اشتراک: {expire}"
         )
         await callback.message.edit_text(badge(text))

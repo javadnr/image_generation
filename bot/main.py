@@ -4,14 +4,10 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.client.telegram import TelegramAPIServer
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
-from sqlalchemy import update
 
 from bot.config import settings
-from bot.utils.timezone import IRAN_TZ
 from bot.db.engine import init_db, async_session
-from bot.db.models import BotSettings, User
+from bot.db.models import BotSettings
 from bot.middlewares.db import DBSessionMiddleware
 from bot.middlewares.force_join import (
     ForceJoinMiddleware, ForceJoinCallbackMiddleware,
@@ -23,18 +19,6 @@ from bot.handlers import start, generate, balance, premium, quality, model, admi
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-async def reset_daily_quotas():
-    async with async_session() as session:
-        from bot.utils.timezone import today_in_tehran
-        await session.execute(
-            update(User)
-            .where(User.tier != "free")
-            .values(daily_used=0, last_reset_date=today_in_tehran())
-        )
-        await session.commit()
-    logger.info("Daily quotas reset.")
-
 
 async def on_startup():
     await init_db()
@@ -94,10 +78,6 @@ async def main():
     if settings.API_SERVER == "bale":
         from bot.handlers import bale_payment
         dp.include_router(bale_payment.router)
-
-    scheduler = AsyncIOScheduler(timezone=IRAN_TZ)
-    scheduler.add_job(reset_daily_quotas, CronTrigger(hour=0, minute=0, timezone=IRAN_TZ))
-    scheduler.start()
 
     dp.startup.register(on_startup)
 

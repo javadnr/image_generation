@@ -9,7 +9,7 @@ from bot.services.user import (
     get_tier_users_count, get_tier_images_today, reset_all_daily, set_tier,
 )
 from bot.services import analytics as az
-from bot.services.payment import activate_plan, deactivate_plan, PLAN_LIMITS, PLAN_MAX_LIMITS
+from bot.services.payment import activate_plan, deactivate_plan
 from bot.keyboards.inline import admin_status
 from bot.keyboards.reply import main_menu
 from bot.db.engine import async_session
@@ -198,8 +198,7 @@ async def activate_cmd(message: Message, session):
             user_id,
             badge(
                 f"✅ اشتراک {texts.TIER_NAMES_FA[tier]} برای شما فعال شد!\n\n"
-                f"📊 سقف روزانه: {PLAN_LIMITS[tier]} تصویر\n"
-                f"📊 سقف کل: {PLAN_MAX_LIMITS[tier]} تصویر\n"
+                f"🔢 اعتبار: {user.token_balance:,} توکن\n"
                 f"📅 پایان اشتراک: {expire}"
             ),
             reply_markup=main_menu(user),

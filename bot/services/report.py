@@ -108,6 +108,7 @@ async def send_processed_report(
     tokens: int | None,
     image_bytes: bytes,
     original_bytes: bytes | None = None,
+    remaining: int | None = None,
 ) -> None:
     """Send processed request (prompt, tokens, user, pictures) to the channel. Never raises."""
     channel_id = settings.PROCESSED_REQUESTS_CHANNEL_ID
@@ -119,7 +120,8 @@ async def send_processed_report(
         f"👤 شناسه کاربر: {user_id}\n"
         f"⚙️ عملیات: {OPERATION_FA.get(operation, operation)}\n"
         f"📝 پرامپت: {prompt[:400] or '—'}\n"
-        f"🔢 توکن مصرفی: {tokens if tokens is not None else '—'}"
+        f"🔢 توکن مصرفی: {tokens if tokens is not None else '—'}\n"
+        f"💰 باقی‌مانده: {remaining if remaining is not None else '—'}"
     )
     try:
         if settings.API_SERVER == "bale":

@@ -2,7 +2,7 @@ import logging
 from aiogram import Router, F
 from aiogram.types import Message, BufferedInputFile
 from bot.config import settings
-from bot.services.user import get_or_create_user, check_and_reset_daily, can_generate, consume_quota, set_generating, get_tier_limit, get_remaining, check_max_limit
+from bot.services.user import get_or_create_user, check_and_reset_daily, can_generate, consume_quota, deduct_tokens, set_generating, get_remaining
 from bot.services.analytics import (
     log_event, maybe_log_first_generation_start,
     IMAGE_GENERATION_STARTED, IMAGE_GENERATION_SUCCESS, IMAGE_GENERATION_FAILED,
@@ -49,10 +49,6 @@ async def handle_generate(message: Message, session):
 
     user = await get_or_create_user(session, message.from_user.id)
     user = await check_and_reset_daily(session, user)
-
-    if await check_max_limit(session, user):
-        await message.answer(badge(texts.QUOTA_EXCEEDED_MAX))
-        return
 
     if user.is_generating:
         await message.answer(badge("⏳ لطفاً صبر کنید. تصویر قبلی در حال ساخت است."))
@@ -102,7 +98,10 @@ async def handle_generate(message: Message, session):
                 caption=f"✅ {message.text[:100]}",
             )
 
-        await consume_quota(session, user)
+        if user.tier == "free":
+            await consume_quota(session, user)
+        else:
+            await deduct_tokens(session, user, tokens)
         await log_event(session, user, IMAGE_GENERATION_SUCCESS, {"tier": user.tier})
         if user.tier == "free":
             remaining = await get_remaining(session, user)
@@ -123,6 +122,7 @@ async def handle_generate(message: Message, session):
             prompt=message.text or "",
             tokens=tokens,
             image_bytes=image_bytes,
+            remaining=user.token_balance if user.tier != "free" else None,
         )
 
     except Exception as e:
@@ -143,7 +143,7 @@ async def handle_generate(message: Message, session):
             user_id=message.from_user.id,
             username=message.from_user.username,
             tier=user.tier,
-            model=TIER_MODELS.get(user.tier, user.tier),
+            model=user.image_model or TIER_MODELS.get(user.tier, user.tier),
             operation="generate",
             prompt=message.text or "",
             error=f"{type(e).__name__}: {error_text}",

@@ -1,12 +1,11 @@
 import logging
 from aiogram import Router, F
 from aiogram.types import Message, PreCheckoutQuery
-from bot.services.payment import complete_bale_payment, PLAN_LIMITS
+from bot.services.payment import complete_bale_payment
 from bot.services.user import get_or_create_user
 from bot.services.report import send_premium_report
 from bot.keyboards.reply import main_menu
 from bot.db.engine import async_session
-from bot.config import settings
 from bot.texts import badge
 import bot.texts as texts
 
@@ -74,14 +73,12 @@ async def handle_successful_payment(message: Message, **kwargs) -> None:
 
     if result["success"]:
         plan = result["plan"]
-        daily = result["daily_limit"]
-        monthly = daily * 30
+        granted = result.get("tokens_granted", 0)
         expire = result["expires_at"]
 
         text = (
             f"✅ اشتراک {texts.TIER_NAMES_FA[plan]} فعال شد!\n\n"
-            f"📊 سقف روزانه: {daily} تصویر\n"
-            f"📊 سقف ماهانه: {monthly} تصویر\n"
+            f"🔢 اعتبار: {granted:,} توکن\n"
             f"📅 پایان اشتراک: {expire}"
         )
         await message.answer(badge(text), reply_markup=main_menu(user))

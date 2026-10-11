@@ -1,6 +1,5 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from bot.config import settings
-from bot.services.user import get_tier_limit
 from bot.services.report import TIER_PRICES
 from bot.services.models import model_ids, model_label, is_free_model
 import bot.texts as texts

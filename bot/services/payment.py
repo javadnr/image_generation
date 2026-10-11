@@ -18,17 +18,9 @@ PLAN_PRICES = {
     "gold": settings.GOLD_PRICE,
 }
 
-PLAN_LIMITS = {
-    "bronze": settings.BRONZE_LIMIT,
-    "silver": settings.SILVER_LIMIT,
-    "gold": settings.GOLD_LIMIT,
-}
-
-PLAN_MAX_LIMITS = {
-    "bronze": settings.BRONZE_MAX_LIMIT,
-    "silver": settings.SILVER_MAX_LIMIT,
-    "gold": settings.GOLD_MAX_LIMIT,
-}
+def _plan_tokens(plan: str) -> int:
+    from bot.services.models import plan_allowance
+    return plan_allowance(plan)
 
 
 def get_zarinpal_client() -> ZarinPalClient:
@@ -64,16 +56,14 @@ async def _find_pending_tx(session: AsyncSession, user_id: int, plan: str):
 async def activate_plan(session: AsyncSession, user: User, plan: str) -> None:
     user.tier = plan
     user.premium_expire_date = datetime.now() + timedelta(days=settings.PREMIUM_DURATION_DAYS)
-    user.daily_used = 0
-    user.total_used = 0
+    user.token_balance = _plan_tokens(plan)
     await session.commit()
 
 
 async def deactivate_plan(session: AsyncSession, user: User) -> None:
     user.tier = "free"
     user.premium_expire_date = None
-    user.daily_used = 0
-    user.total_used = 0
+    user.token_balance = 0
     await session.commit()
 
 
@@ -150,8 +140,7 @@ async def verify_zarinpal_payment(session: AsyncSession, tx_id: str) -> dict:
         return {
             "success": True,
             "plan": tx.plan,
-            "daily_limit": PLAN_LIMITS.get(tx.plan, 0),
-            "max_limit": PLAN_MAX_LIMITS.get(tx.plan, 0),
+            "tokens_granted": user.token_balance,
             "expires_at": user.premium_expire_date.strftime("%Y/%m/%d") if user.premium_expire_date else "—",
             "expire_dt": user.premium_expire_date,
             "paid_at": tx.paid_at,
@@ -229,8 +218,7 @@ async def complete_bale_payment(
     return {
         "success": True,
         "plan": tx.plan,
-        "daily_limit": PLAN_LIMITS.get(tx.plan, 0),
-        "max_limit": PLAN_MAX_LIMITS.get(tx.plan, 0),
+        "tokens_granted": user.token_balance,
         "expires_at": user.premium_expire_date.strftime("%Y/%m/%d") if user.premium_expire_date else "—",
         "expire_dt": user.premium_expire_date,
         "paid_at": tx.paid_at,

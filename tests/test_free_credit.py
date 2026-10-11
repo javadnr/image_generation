@@ -70,14 +70,14 @@ async def test_free_credit_usable_until_spent(db):
 
 
 @pytest.mark.asyncio
-async def test_premium_still_resets_daily(db):
-    yesterday = date.today() - timedelta(days=1)
-    user = await _make_user(db, 803, tier="bronze", daily_used=10, last_reset=yesterday)
+async def test_premium_gated_by_tokens_not_daily(db):
+    user = await _make_user(db, 803, tier="bronze")
+    await db.commit()
+    user.token_balance = 0
     await db.commit()
 
-    user = await user_svc.check_and_reset_daily(db, user)
-    assert user.daily_used == 0
-    assert await user_svc.can_generate(db, user)
+    # no balance → blocked even with untouched daily counters
+    assert await user_svc.can_generate(db, user) is False
 
 
 @pytest.mark.asyncio

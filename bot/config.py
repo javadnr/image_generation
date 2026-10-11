@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     PROCESSED_REQUESTS_CHANNEL_ID: int | None = None
     REQUIRED_CHANNELS: dict[str, str] = {}
     MODELS: dict = {}
+    PLAN_TOKENS: dict = {}
     BADGE: str = "@kiteck_TM"
     ZARINPAL_API_URL: str = ""
     ZARINPAL_PROJECT_ID: int = 0
@@ -81,6 +82,15 @@ class Settings(BaseSettings):
                 return {}
             return json.loads(v)
         return v or {}
+
+    @validator("PLAN_TOKENS", pre=True)
+    def parse_plan_tokens(cls, v):
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return {}
+            return {k: int(x) for k, x in json.loads(v).items()}
+        return {k: int(x) for k, x in (v or {}).items()}
 
     class Config:
         env_file = ".env"
