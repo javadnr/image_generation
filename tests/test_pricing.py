@@ -122,6 +122,34 @@ def test_fx_note_hidden_without_rate(catalog):
     assert premium_h._fx_note_text() == ""
 
 
+def test_images_per_quality_math(catalog):
+    from bot.services.models import images_per_quality
+
+    # user example: 20,000 tokens → 100 / 45 / 11
+    assert images_per_quality(20000, "gpt-image-2.5-flare") == {
+        "low": 100, "medium": 45, "high": 11,
+    }
+    assert images_per_quality(0, "gpt-image-2.5-flare") == {
+        "low": 0, "medium": 0, "high": 0,
+    }
+    # unknown model estimates are skipped
+    assert images_per_quality(20000, "unknown-model") == {}
+
+
+def test_balance_template_renders_breakdown():
+    import bot.texts as texts
+
+    rendered = texts.QUOTA_REMAINING_TOKENS.format(
+        tier="برنزی",
+        balance="20,000",
+        model="gpt-image-2.5-flare",
+        breakdown="• پایین: 100 تصویر\n• متوسط: 45 تصویر",
+    )
+    assert "20,000" in rendered
+    assert "100 تصویر" in rendered
+    assert len(rendered) < 4096
+
+
 def test_plan_usd_cost(catalog):
     # 10,000 tokens @ $30/1M = $0.30 (not $3.00)
     assert pricing_svc.plan_usd_cost("bronze") == pytest.approx(0.30)

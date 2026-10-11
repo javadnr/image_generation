@@ -4,7 +4,7 @@ from bot.services.user import (
     get_or_create_user, check_and_reset_daily, get_remaining, get_tier_limit,
     estimate_tokens_for,
 )
-from bot.services.models import default_model
+from bot.services.models import default_model, images_per_quality
 from bot.keyboards.reply import main_menu
 from bot.keyboards.inline import plans_button
 from bot.texts import badge
@@ -34,13 +34,16 @@ async def balance(message: Message, session):
         model = user.image_model or default_model()
         quality = user.image_quality or "low"
         estimate = estimate_tokens_for(user)
-        images = balance_tokens // estimate if estimate else "—"
+        per_quality = images_per_quality(balance_tokens, model)
+        breakdown = "\n".join(
+            f"• {texts.QUALITY_LABELS[q]}: {count:,} تصویر"
+            for q, count in per_quality.items()
+        ) or "—"
         text = texts.QUOTA_REMAINING_TOKENS.format(
             tier=tier_name,
             balance=f"{balance_tokens:,}",
-            images=images if images == "—" else f"{images:,}",
             model=model,
-            quality=quality,
+            breakdown=breakdown,
         )
         out_of_credit = balance_tokens <= 0 or (
             estimate is not None and balance_tokens < estimate

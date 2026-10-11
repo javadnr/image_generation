@@ -81,6 +81,24 @@ def estimate_tokens(model_id: str | None, quality: str | None) -> int | None:
     return tokens if isinstance(tokens, int) else None
 
 
+QUALITY_ORDER = ("low", "medium", "high")
+
+
+def images_per_quality(balance: int, model_id: str | None) -> dict:
+    """Approximate remaining images per quality (floor division).
+
+    Qualities with unknown estimates are skipped. Counts are estimates —
+    actual consumption varies per generation.
+    """
+    model = model_id or default_model()
+    out = {}
+    for quality in QUALITY_ORDER:
+        estimate = estimate_tokens(model, quality)
+        if estimate:
+            out[quality] = balance // estimate
+    return out
+
+
 def plan_allowance(plan: str) -> int:
     """Token allowance granted by a plan (BRONZE/SILVER/GOLD_MAX_TOKEN)."""
     return {
