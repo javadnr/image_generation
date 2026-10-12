@@ -55,14 +55,17 @@ async def _find_pending_tx(session: AsyncSession, user_id: int, plan: str):
     return None, 0
 
 
-async def activate_plan(session: AsyncSession, user: User, plan: str) -> None:
+async def activate_plan(
+    session: AsyncSession, user: User, plan: str, days: int | None = None,
+) -> None:
+    duration = days if days and days > 0 else settings.PREMIUM_DURATION_DAYS
     user.tier = plan
-    user.premium_expire_date = datetime.now() + timedelta(days=settings.PREMIUM_DURATION_DAYS)
+    user.premium_expire_date = datetime.now() + timedelta(days=duration)
     user.token_balance = _plan_tokens(plan)
     await session.commit()
     logger.info(
-        "Plan activated: user=%d plan=%s balance=%d",
-        user.telegram_id, plan, user.token_balance,
+        "Plan activated: user=%d plan=%s days=%d balance=%d",
+        user.telegram_id, plan, duration, user.token_balance,
     )
 
 

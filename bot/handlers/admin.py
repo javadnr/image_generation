@@ -164,7 +164,7 @@ async def activate_cmd(message: Message, session):
         return
 
     parts = message.text.split()
-    if len(parts) != 3:
+    if len(parts) not in (3, 4):
         await message.answer(badge(texts.ADMIN_ACTIVATE_USAGE))
         return
 
@@ -175,6 +175,9 @@ async def activate_cmd(message: Message, session):
 
     try:
         user_id = int(parts[2])
+        days = int(parts[3]) if len(parts) == 4 else None
+        if days is not None and days <= 0:
+            raise ValueError
     except ValueError:
         await message.answer(badge(texts.ADMIN_ACTIVATE_USAGE))
         return
@@ -185,7 +188,7 @@ async def activate_cmd(message: Message, session):
         await message.answer(badge(f"⚠️ کاربر با ID {user_id} یافت نشد."))
         return
 
-    await activate_plan(session, user, tier)
+    await activate_plan(session, user, tier, days)
     await message.answer(badge(texts.ADMIN_ACTIVATED.format(tier=tier, user_id=user_id)))
 
     from bot.services.report import send_premium_report

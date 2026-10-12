@@ -84,7 +84,7 @@ ADMIN_STATS = (
     "🛠 دستورات مدیر:\n"
     "  /stats — آمار کلی\n"
     "  /set_premium <user_id> <tier> — تغییر پلن\n"
-    "  /activate <tier> <user_id> — فعال‌سازی اشتراک\n"
+    "  /activate <tier> <user_id> [days] — فعال‌سازی اشتراک\n"
     "  /deactivate <user_id> — بازگشت به رایگان\n"
     "  /userinfo <user_id> — اطلاعات کاربر\n"
     "  /broadcast <متن> — ارسال همگانی\n"
@@ -103,7 +103,7 @@ ERROR_MODERATION = "⚠️ پرامپت شما مطابق سیاست‌های م
 
 # Admin premium activation
 ADMIN_USAGE = "استفاده: /set_premium <user_id> <tier>"
-ADMIN_ACTIVATE_USAGE = "استفاده: /activate <tier> <user_id>\nمثال: /activate silver 123456789"
+ADMIN_ACTIVATE_USAGE = "استفاده: /activate <tier> <user_id> [days]\nمثال: /activate silver 123456789 30"
 ADMIN_DEACTIVATE_USAGE = "استفاده: /deactivate <user_id>\nمثال: /deactivate 123456789"
 ADMIN_USERINFO_USAGE = "استفاده: /userinfo <user_id>\nمثال: /userinfo 123456789"
 ADMIN_DEACTIVATED = "✅ کاربر {user_id} به پلن رایگان بازگشت."

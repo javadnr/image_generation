@@ -106,6 +106,33 @@ async def test_activate_grants_allowance(db, catalog):
 
 
 @pytest.mark.asyncio
+async def test_activate_custom_days(db, catalog):
+    from datetime import datetime, timedelta
+    user = await _make_user(db, 1015)
+    await db.commit()
+
+    before = datetime.now()
+    await activate_plan(db, user, "silver", 7)
+    assert user.tier == "silver"
+    delta = user.premium_expire_date - before
+    assert timedelta(days=6, hours=23) < delta < timedelta(days=7, hours=1)
+
+
+@pytest.mark.asyncio
+async def test_activate_default_duration(db, catalog):
+    from datetime import datetime, timedelta
+    from bot.config import settings
+    user = await _make_user(db, 1016)
+    await db.commit()
+
+    before = datetime.now()
+    await activate_plan(db, user, "gold")
+    delta = user.premium_expire_date - before
+    expected = settings.PREMIUM_DURATION_DAYS
+    assert timedelta(days=expected - 1) < delta < timedelta(days=expected, hours=1)
+
+
+@pytest.mark.asyncio
 async def test_deactivate_zeroes_balance(db, catalog):
     user = await _make_user(db, 1002, tier="gold", token_balance=60000)
     await db.commit()

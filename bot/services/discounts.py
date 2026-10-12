@@ -89,10 +89,13 @@ def discount_for(plan: str, discounts: dict | None) -> int:
 
 
 def discounted_price(base: int | None, percent: int) -> int | None:
-    """Apply percent off, then round UP via the standard ceil_price rule."""
-    from bot.services.pricing import ceil_price
+    """Apply percent off with exact integer math (50% of 50000 stays 25000).
+
+    Only the undiscounted base price follows the ceil10k rule; a discounted
+    price is kept as-is so the percent off is exact.
+    """
     if base is None:
         return None
     if not percent:
         return base
-    return ceil_price(base * (100 - percent) / 100)
+    return base * (100 - percent) // 100

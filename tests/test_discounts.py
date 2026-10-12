@@ -148,18 +148,19 @@ def test_discount_precedence():
     assert dis_svc.discount_for("gold", {"all": (10, exp), "bronze": (15, exp)}) == 10
 
 
-def test_discounted_price_rounds_up():
-    # 80000 base, 15% off -> 68000 -> ceil to 70000 (project rounding rule)
-    assert dis_svc.discounted_price(80000, 15) == 70000
+def test_discounted_price_keeps_exact_value():
+    # discounted prices are NOT re-rounded: 50% of 50000 stays 25000
+    assert dis_svc.discounted_price(50000, 50) == 25000
+    assert dis_svc.discounted_price(80000, 15) == 68000
     assert dis_svc.discounted_price(80000, 0) == 80000
     assert dis_svc.discounted_price(None, 15) is None
     assert dis_svc.discounted_price(80000, 100) == 0
 
 
 def test_plan_price_with_discount(catalog):
-    # bronze: 0.3 USD * 100000 = 30000; 50% -> 15000 -> ceil10k 20000
+    # bronze: 0.3 USD * 100000 = 30000; 50% -> 15000 kept as-is
     assert pricing_svc.plan_price_toman("bronze", 0) == 30000
-    assert pricing_svc.plan_price_toman("bronze", 50) == 20000
+    assert pricing_svc.plan_price_toman("bronze", 50) == 15000
     assert pricing_svc.plan_price_toman("unknown", 50) is None
 
 
@@ -190,7 +191,7 @@ def test_premium_menu_shows_discounted_price(catalog):
     kb = premium_menu(user, {"silver": (50, exp)})
     texts = [b.text for row in kb.inline_keyboard for b in row]
     assert any("تخفیف" in t for t in texts)
-    # 0.75*100000=75000 -> 50% -> 37500 -> ceil10k 40000 -> "۴۰ هزار تومان"
+    # 0.75*100000=75000 -> base ceil10k 80000 -> 50% -> 40000
     assert any("۴۰ هزار تومان" in t for t in texts)
 
 
@@ -207,8 +208,8 @@ async def test_zarinpal_purchase_uses_discounted_amount(db, catalog):
         mock.return_value = client
         from bot.services.payment import create_zarinpal_purchase
         result = await create_zarinpal_purchase(db, user, "bronze", 50)
-    assert result["amount_toman"] == 20000
-    assert client.request_payment.call_args[0][0] == 20000
+    assert result["amount_toman"] == 15000
+    assert client.request_payment.call_args[0][0] == 15000
 
 
 # ---------- broadcast targeting ----------
