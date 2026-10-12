@@ -298,6 +298,69 @@ async def broadcast_cmd(message: Message, session):
     asyncio.create_task(_run())
 
 
+@router.message(F.text.startswith("/userinfo"))
+async def userinfo_cmd(message: Message, session):
+    if message.from_user.id not in settings.ADMIN_IDS:
+        return
+
+    parts = message.text.split()
+    if len(parts) != 2:
+        await message.answer(badge(texts.ADMIN_USERINFO_USAGE))
+        return
+
+    try:
+        user_id = int(parts[1])
+    except ValueError:
+        await message.answer(badge(texts.ADMIN_USERINFO_USAGE))
+        return
+
+    result = await session.execute(select(User).where(User.telegram_id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        await message.answer(badge(f"⚠️ کاربر با ID {user_id} یافت نشد."))
+        return
+
+    try:
+        chat = await message.bot.get_chat(user_id)
+        username = f"@{chat.username}" if chat.username else "—"
+        name = chat.first_name or "—"
+    except Exception:
+        logger.exception("Failed to fetch chat info for user %d", user_id)
+        username, name = "—", "—"
+
+    from sqlalchemy import func
+    from bot.db.models import UserEvent
+    from bot.services.analytics import IMAGE_GENERATION_SUCCESS
+    img_result = await session.execute(
+        select(func.count(UserEvent.id)).where(
+            UserEvent.user_id == user.id,
+            UserEvent.event_type == IMAGE_GENERATION_SUCCESS,
+        )
+    )
+    images = img_result.scalar() or 0
+
+    expire = (
+        user.premium_expire_date.strftime("%Y/%m/%d")
+        if user.premium_expire_date else "—"
+    )
+    joined = (
+        user.created_at.strftime("%Y/%m/%d")
+        if user.created_at else "—"
+    )
+    await message.answer(badge(
+        "👤 اطلاعات کاربر\n"
+        "─────────────────\n"
+        f"🆔 شناسه: {user.telegram_id}\n"
+        f"📛 نام: {name}\n"
+        f"🔗 یوزرنیم: {username}\n"
+        f"📦 پلن: {user.tier}\n"
+        f"💰 موجودی: {user.token_balance or 0:,}\n"
+        f"🖼 تصاویر ساخته‌شده: {images}\n"
+        f"📅 پایان اشتراک: {expire}\n"
+        f"🆕 عضویت: {joined}"
+    ))
+
+
 @router.message(F.text.startswith("/stats"))
 async def stats_cmd(message: Message, session):
     if message.from_user.id not in settings.ADMIN_IDS:
