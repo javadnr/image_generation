@@ -128,6 +128,17 @@ async def test_clear_with_zero_percent(db):
 
 
 @pytest.mark.asyncio
+async def test_clear_all_discounts(db):
+    await dis_svc.set_discount(db, "bronze", 15, 1)
+    await dis_svc.set_discount(db, "all", 10, 2)
+    assert len(await dis_svc.get_active_discounts(db)) == 2
+    removed = await dis_svc.clear_all_discounts(db)
+    assert removed == 2
+    assert await dis_svc.get_active_discounts(db) == {}
+    assert await dis_svc.clear_all_discounts(db) == 0
+
+
+@pytest.mark.asyncio
 async def test_expired_discounts_excluded(db):
     from bot.db.models import Discount
     db.add(Discount(scope="bronze", percent=50,

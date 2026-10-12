@@ -55,6 +55,17 @@ async def set_discount(session: AsyncSession, scope: str, percent: int, days: in
     logger.info("Discount set: scope=%s percent=%d days=%d", scope, percent, days)
 
 
+async def clear_all_discounts(session: AsyncSession) -> int:
+    """Delete every discount row. Returns the number removed."""
+    result = await session.execute(select(Discount))
+    rows = result.scalars().all()
+    for row in rows:
+        await session.delete(row)
+    await session.commit()
+    logger.info("Cleared %d discount(s)", len(rows))
+    return len(rows)
+
+
 async def get_active_discounts(session: AsyncSession) -> dict:
     """Return {scope: (percent, expires_at)} for non-expired discounts."""
     now = datetime.now()

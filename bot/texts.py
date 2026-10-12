@@ -88,7 +88,8 @@ ADMIN_STATS = (
     "  /deactivate <user_id> — بازگشت به رایگان\n"
     "  /userinfo <user_id> — اطلاعات کاربر\n"
     "  /broadcast <متن> — ارسال همگانی\n"
-    "  /off <plan|all> <percent> <days> — تخفیف مدت‌دار"
+    "  /off <plan|all> <percent> <days> — تخفیف مدت‌دار\n"
+    "  /endoff — پایان همه تخفیف‌ها"
 )
 ADMIN_TOGGLE_ON = "🟢 ربات فعال شد."
 ADMIN_TOGGLE_OFF = "🔴 ربات غیرفعال شد."
@@ -117,6 +118,7 @@ ADMIN_BROADCAST_DONE = "✅ ارسال همگانی تمام شد\n✔️ موف
 ADMIN_OFF_USAGE = "استفاده:\n/off <bronze|silver|gold|all> <percent> <days>\nمثال:\n/off bronze 15 1\n/off all 10 1\nبرای لغو: درصد را ۰ بگذارید."
 ADMIN_OFF_DONE = "✅ تخفیف {percent}٪ برای {scope} تا {until} فعال شد."
 ADMIN_OFF_CLEARED = "✅ تخفیف {scope} لغو شد."
+ADMIN_ENDOFF_DONE = "✅ همه تخفیف‌ها لغو شد ({count} مورد)."
 DISCOUNT_ANNOUNCE = (
     "🎉 تخفیف ویژه! 🎉\n\n"
     "💎 {detail}\n\n"

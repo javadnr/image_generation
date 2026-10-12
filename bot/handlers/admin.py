@@ -379,6 +379,16 @@ async def off_cmd(message: Message, session):
     asyncio.create_task(_run())
 
 
+@router.message(F.text.startswith("/endoff"))
+async def endoff_cmd(message: Message, session):
+    if message.from_user.id not in settings.ADMIN_IDS:
+        return
+
+    from bot.services.discounts import clear_all_discounts
+    removed = await clear_all_discounts(session)
+    await message.answer(badge(texts.ADMIN_ENDOFF_DONE.format(count=removed)))
+
+
 @router.message(F.text.startswith("/userinfo"))
 async def userinfo_cmd(message: Message, session):
     if message.from_user.id not in settings.ADMIN_IDS:
