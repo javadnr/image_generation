@@ -38,14 +38,6 @@ def tooman_display(price: int | None) -> str:
 QUALITY_FA = {"low": "پایین", "medium": "متوسط", "high": "بالا"}
 
 
-def _plan_images_text(plan: str, allowance: int) -> str:
-    """Approximate image count for a plan allowance (Low-quality basis)."""
-    low = images_per_quality(allowance, default_model()).get("low")
-    if low is not None:
-        return f"• تقریباً {low:,} تصویر"
-    return f"• تقریباً {allowance:,} تصویر"
-
-
 def _quality_breakdown(allowance: int) -> str | None:
     """Per-quality approximate image counts, profit-adjusted."""
     per_quality = images_per_quality(allowance, default_model())
@@ -108,11 +100,11 @@ def premium_text(user) -> str:
         f"🆓 پلن رایگان\n"
         f"• {settings.FREE_USAGE_TOKEN:,} اعتبار\n\n"
         f"🥉 برنزی — {tooman_display(plan_price_toman('bronze'))}\n"
-        f"{_plan_images_text('bronze', plan_allowance('bronze'))}\n\n"
+        f"• {plan_allowance('bronze'):,} اعتبار\n\n"
         f"🥈 نقره‌ای — {tooman_display(plan_price_toman('silver'))} ⭐ محبوب‌ترین\n"
-        f"{_plan_images_text('silver', plan_allowance('silver'))}\n\n"
+        f"• {plan_allowance('silver'):,} اعتبار\n\n"
         f"🥇 طلایی — {tooman_display(plan_price_toman('gold'))} 🔥 بیشترین اعتبار\n"
-        f"{_plan_images_text('gold', plan_allowance('gold'))}\n\n"
+        f"• {plan_allowance('gold'):,} اعتبار\n\n"
         f"📌 توجه: تعداد تصاویر نمایش‌داده‌شده بر اساس کیفیت پایین است. "
         f"تولید تصویر با کیفیت بالاتر، از موجودی شما بیشتر کم می‌کند.\n"
         f"{_quality_breakdown_text()}\n"

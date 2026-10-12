@@ -139,14 +139,6 @@ def images_per_quality(balance: int, model_id: str | None) -> dict:
     return out
 
 
-def used_credits(actual_tokens: int | None, low_effective: int | None) -> int | None:
-    """Whole image credits consumed, rounded up. None when unknown."""
-    if not actual_tokens or not low_effective:
-        return None
-    charged = charge_for(actual_tokens)
-    return -(-charged // low_effective)
-
-
 def credit_usage(
     balance_before: int, actual_tokens: int | None, model_id: str | None
 ) -> tuple[int | None, int | None]:

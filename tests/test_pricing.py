@@ -125,21 +125,6 @@ def test_fx_note_hidden_without_rate(catalog):
     assert premium_h._fx_note_text() == ""
 
 
-def test_used_credits_math(catalog):
-    from bot.services.models import used_credits
-
-    # 20% profit on the low_effective basis passed in
-    assert used_credits(200, 500) == 1
-    assert used_credits(500, 500) == 2
-    assert used_credits(501, 500) == 2
-    assert used_credits(700, 500) == 2
-    assert used_credits(1200, 500) == 3
-    assert used_credits(700, 200) == 5
-    assert used_credits(None, 200) is None
-    assert used_credits(500, None) is None
-    assert used_credits(0, 200) is None
-
-
 def test_edits_available_math(monkeypatch):
     from bot.config import settings
     from bot.services.models import edits_available
@@ -189,6 +174,17 @@ def test_model_help_text(catalog):
     assert "هم‌قیمت" in texts.MODEL_HELP
     assert "توکن" not in texts.MODEL_HELP
     assert "token" not in texts.MODEL_HELP.lower()
+
+
+def test_credit_usage_math(catalog):
+    from bot.services.models import credit_usage
+
+    # 20% profit, flare low effective 240: 700 actual -> 840 charged -> 4 used
+    assert credit_usage(10000, 700, "gpt-image-2.5-flare") == (4, 38)
+    assert credit_usage(10000, 200, "gpt-image-2.5-flare") == (1, 40)
+    assert credit_usage(200, 2950, "gpt-image-2.5-flare") == (15, 0)
+    assert credit_usage(10000, None, "gpt-image-2.5-flare") == (None, None)
+    assert credit_usage(10000, 700, "unknown-model") == (None, None)
 
 
 def test_images_per_quality_math(catalog):
