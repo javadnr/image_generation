@@ -73,7 +73,12 @@ DBSession is last so other middlewares can run without needing a session.
 2. Add to `.env.example`
 3. Import `from bot.config import settings` where needed
 
-### Add new DB column
-1. Add to model in `bot/db/models.py`
-2. Delete old DB volume: `docker compose down -v`
-3. Restart: `docker compose up --build`
+### DB migrations (Alembic)
+- Every container start runs `alembic upgrade head` via `entrypoint.sh`
+  before the bot boots — stale databases converge automatically, no wipe.
+- After changing models: `PYTHONPATH=. alembic revision --autogenerate -m "describe change"`,
+  review the generated file in `alembic/versions/`, then deploy with
+  `docker compose up --build -d`.
+- Manual commands need `PYTHONPATH=.` (the container entrypoint sets it).
+- One-time DATA backfills go inside the revision as `op.execute(...)`
+  (Alembic runs each revision exactly once per database).

@@ -13,4 +13,7 @@ COPY . .
 
 RUN mkdir -p images
 
+RUN chmod +x /app/entrypoint.sh
+
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["python", "-m", "bot.main"]

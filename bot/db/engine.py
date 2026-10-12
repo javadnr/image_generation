@@ -7,6 +7,9 @@ async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit
 
 
 async def init_db():
+    # Schema migrations run via Alembic in the container entrypoint
+    # (alembic upgrade head) before the bot starts. create_all only
+    # covers brand-new tables.
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
