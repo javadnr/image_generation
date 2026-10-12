@@ -108,13 +108,16 @@ async def send_processed_report(
     channel_id = settings.PROCESSED_REQUESTS_CHANNEL_ID
     if not channel_id:
         return
+    from bot.services.models import charge_for
+    charged = charge_for(tokens) if tokens is not None else None
     caption = (
         "🖼 درخواست پردازش‌شده\n"
         "─────────────────\n"
         f"👤 شناسه کاربر: {user_id}\n"
         f"⚙️ عملیات: {OPERATION_FA.get(operation, operation)}\n"
         f"📝 پرامپت: {prompt[:400] or '—'}\n"
-        f"🔢 توکن مصرفی: {tokens if tokens is not None else '—'}\n"
+        f"🔢 توکن مصرفی (API): {tokens if tokens is not None else '—'}\n"
+        f"➕ با سود: {charged if charged is not None else '—'}\n"
         f"💰 باقی‌مانده: {remaining if remaining is not None else '—'}"
     )
     try:

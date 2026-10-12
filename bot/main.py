@@ -33,6 +33,11 @@ async def on_startup():
             row.bot_enabled = settings.BOT_ENABLED
             await session.commit()
 
+    async with async_session() as session:
+        from bot.services.user import normalize_users_on_startup
+        counts = await normalize_users_on_startup(session)
+        logger.info("Startup user normalization: %s", counts)
+
     init_queues()
     from bot.services.pricing import refresh_fx_rate, fx_loop
     await refresh_fx_rate()

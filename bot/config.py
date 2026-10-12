@@ -11,10 +11,6 @@ class Settings(BaseSettings):
     DB_PASSWORD: str = "changeme"
     DATABASE_URL: str = "postgresql+asyncpg://bot:changeme@postgres:5432/imagebot"
     API_SERVER: str = "telegram"
-    FREE_MODEL: str = "gpt-image-1-mini"
-    BRONZE_MODEL: str = "gpt-image-1-mini"
-    SILVER_MODEL: str = "gpt-image-1-mini"
-    GOLD_MODEL: str = "gpt-image-1-mini"
     FREE_QUEUE_SIZE: int = 3
     BRONZE_QUEUE_SIZE: int = 10
     SILVER_QUEUE_SIZE: int = 25

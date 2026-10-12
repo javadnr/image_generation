@@ -22,6 +22,7 @@ class User(Base):
     image_height = Column(Integer, default=1024)
     image_quality = Column(String(10), default="low")
     image_model = Column(String(50), default="gpt-image-2.5-flare")
+    pending_prompt = Column(Text, nullable=True)
     optimize_prompt = Column(Boolean, default=False)
     premium_expire_date = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

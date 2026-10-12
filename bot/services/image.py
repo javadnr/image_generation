@@ -7,13 +7,6 @@ from bot.services.models import default_model
 
 log = logging.getLogger(__name__)
 
-TIER_MODELS = {
-    "free": settings.FREE_MODEL,
-    "bronze": settings.BRONZE_MODEL,
-    "silver": settings.SILVER_MODEL,
-    "gold": settings.GOLD_MODEL,
-}
-
 client = AsyncOpenAI(
     api_key=settings.OPENAI_API_KEY,
     base_url=settings.OPENAI_BASE_URL or None,
@@ -40,7 +33,8 @@ def _extract_tokens(result) -> int | None:
 
 
 async def generate_image(prompt: str, tier: str, width: int = 1024, height: int = 1024, quality: str = "low", model: str | None = None) -> tuple[bytes, int | None]:
-    model = model or TIER_MODELS[tier]
+    from bot.services.models import default_model
+    model = model or default_model()
     log.info("Generating image: model=%s size=%dx%d quality=%s prompt=%s", model, width, height, quality, prompt[:80])
     result = await client.images.generate(
         model=model,

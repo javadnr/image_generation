@@ -78,6 +78,13 @@ def model_keyboard(tier: str, current: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
+def confirm_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=texts.CONFIRM_YES, callback_data="confirm_yes"),
+        InlineKeyboardButton(text=texts.CONFIRM_NO, callback_data="confirm_no"),
+    ]])
+
+
 def admin_status(bot_enabled: bool) -> InlineKeyboardMarkup:
     toggle_text = "🔴 غیرفعال کردن ربات" if bot_enabled else "🟢 فعال کردن ربات"
     return InlineKeyboardMarkup(inline_keyboard=[

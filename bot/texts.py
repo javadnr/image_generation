@@ -40,6 +40,15 @@ MODEL_HELP = (
 MODEL_SET = "✅ مدل تولید تصویر روی {label} تنظیم شد."
 MODEL_LOCKED = "🔒 این مدل مخصوص کاربران پریمیوم است."
 
+# Generate confirmation
+CONFIRM_YES = "✅ بله، بساز"
+CONFIRM_NO = "❌ نه، لغو کن"
+CONFIRM_ASK = "🖼 تصویر با این پرامپت ساخته شود؟"
+CONFIRM_PROGRESS = "⏳ در حال ساخت تصویر با پرامپت شما:"
+CONFIRM_EMPTY = "⚠️ پرامپت فعالی وجود ندارد. لطفاً یک پرامپت جدید بفرستید."
+CONFIRM_BUSY = "⏳ لطفاً صبر کنید. تصویر قبلی در حال ساخت است."
+CONFIRM_PROMPT_MAX = 300
+
 # Premium
 PREMIUM_TITLE = "💎 اشتراک پریمیوم"
 PREMIUM_BRONZE = "🥉 برنزی — {price} تومان\n۱۰ تصویر در روز"

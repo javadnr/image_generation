@@ -1,8 +1,11 @@
 import logging
 from aiogram import Router, F
-from aiogram.types import Message, BufferedInputFile
+from aiogram.types import Message, CallbackQuery, BufferedInputFile
 from bot.config import settings
-from bot.services.user import get_or_create_user, can_generate, deduct_tokens, set_generating
+from bot.services.user import (
+    get_or_create_user, can_generate, deduct_tokens, set_generating,
+    set_pending_prompt, clear_pending_prompt, claim_pending_prompt,
+)
 from bot.services.analytics import (
     log_event, maybe_log_first_generation_start,
     IMAGE_GENERATION_STARTED, IMAGE_GENERATION_SUCCESS, IMAGE_GENERATION_FAILED,
@@ -10,11 +13,11 @@ from bot.services.analytics import (
 )
 from bot.handlers.premium import answer_quota_exceeded
 from bot.services.queue import acquire_queue, release_queue
-from bot.services.image import generate_image, TIER_MODELS
+from bot.services.image import generate_image
 from bot.services.models import default_model, charge_for, images_per_quality
 from bot.services.report import send_error_report, send_processed_report
 from bot.keyboards.reply import main_menu
-from bot.keyboards.inline import plans_button
+from bot.keyboards.inline import plans_button, confirm_keyboard
 from bot.texts import badge
 import bot.texts as texts
 
@@ -53,31 +56,83 @@ async def handle_generate(message: Message, session):
     user = await get_or_create_user(session, message.from_user.id)
 
     if user.is_generating:
-        await message.answer(badge("⏳ لطفاً صبر کنید. تصویر قبلی در حال ساخت است."))
+        await message.answer(badge(texts.CONFIRM_BUSY))
         return
 
     if not await can_generate(session, user):
         await answer_quota_exceeded(message, session, user)
         return
 
+    await set_pending_prompt(session, user, message.text)
+    await message.answer(
+        badge(f"{texts.CONFIRM_ASK}\n\n«{message.text[:texts.CONFIRM_PROMPT_MAX]}»"),
+        reply_markup=confirm_keyboard(),
+    )
+
+
+@router.callback_query(F.data == "confirm_no")
+async def confirm_no(callback: CallbackQuery, session):
+    await clear_pending_prompt(session, callback.from_user.id)
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+    await callback.answer()
+
+
+@router.callback_query(F.data == "confirm_yes")
+async def confirm_yes(callback: CallbackQuery, session):
+    user = await get_or_create_user(session, callback.from_user.id)
+    if not await can_generate(session, user):
+        await callback.answer()
+        await answer_quota_exceeded(callback.message, session, user)
+        return
+
+    prompt, status = await claim_pending_prompt(session, callback.from_user.id)
+    if status == "busy":
+        await callback.answer(texts.CONFIRM_BUSY, show_alert=True)
+        return
+    if status != "ok" or not prompt:
+        await callback.answer()
+        try:
+            await callback.message.edit_text(badge(texts.CONFIRM_EMPTY))
+        except Exception:
+            pass
+        return
+
+    await callback.answer()
+    await session.refresh(user)
+    try:
+        await callback.message.edit_text(
+            badge(f"{texts.CONFIRM_PROGRESS}\n«{prompt[:texts.CONFIRM_PROMPT_MAX]}»")
+        )
+    except Exception:
+        pass
+
     if not await acquire_queue(user.tier, user.telegram_id):
-        await message.answer(badge("⏳ لطفاً کمی صبر کنید و دوباره تلاش کنید..."))
+        user.pending_prompt = prompt
+        user.is_generating = False
+        await session.commit()
+        await callback.message.answer(badge("⏳ لطفاً کمی صبر کنید و دوباره تلاش کنید..."))
         return
 
     await maybe_log_first_generation_start(session, user)
     await log_event(session, user, IMAGE_GENERATION_STARTED)
+    await _run_generation(
+        callback.message, session, user, prompt,
+        callback.from_user, callback.bot, callback.message,
+    )
 
+
+async def _run_generation(message, session, user, prompt_text, tg_user, bot, gen_msg):
     width = user.image_width if user.tier != "free" else 1024
     height = user.image_height if user.tier != "free" else 1024
 
     try:
-        await set_generating(session, user, True)
-        gen_msg = await message.answer(badge("درحال ساخت...."))
-
         logging.info("User %d tier=%s generating %dx%d", user.telegram_id, user.tier, width, height)
 
         image_bytes, tokens = await generate_image(
-            message.text, user.tier, width, height,
+            prompt_text, user.tier, width, height,
             quality=user.image_quality or "low",
             model=user.image_model or None,
         )
@@ -96,9 +151,9 @@ async def handle_generate(message: Message, session):
                 f"باقی‌مانده: {remaining:,} اعتبار"
             )
         if credit_line:
-            caption = f"✅ {(message.text or '')[:60]}\n{credit_line}"
+            caption = f"✅ {(prompt_text or '')[:60]}\n{credit_line}"
         else:
-            caption = f"✅ {message.text[:100]}"
+            caption = f"✅ {prompt_text[:100]}"
 
         if settings.API_SERVER == "bale":
             from bot.utils.bale_upload import send_photo_bytes_raw
@@ -129,10 +184,10 @@ async def handle_generate(message: Message, session):
                 reply_markup=plans_button(),
             )
         await send_processed_report(
-            message.bot,
-            user_id=message.from_user.id,
+            bot,
+            user_id=tg_user.id,
             operation="generate",
-            prompt=message.text or "",
+            prompt=prompt_text or "",
             tokens=tokens,
             image_bytes=image_bytes,
             remaining=user.token_balance,
@@ -152,13 +207,13 @@ async def handle_generate(message: Message, session):
             error_kind = "generic"
         await log_event(session, user, IMAGE_GENERATION_FAILED, {"error": error_kind})
         await send_error_report(
-            message.bot,
-            user_id=message.from_user.id,
-            username=message.from_user.username,
+            bot,
+            user_id=tg_user.id,
+            username=tg_user.username,
             tier=user.tier,
-            model=user.image_model or TIER_MODELS.get(user.tier, user.tier),
+            model=user.image_model or "—",
             operation="generate",
-            prompt=message.text or "",
+            prompt=prompt_text or "",
             error=f"{type(e).__name__}: {error_text}",
             size=f"{width}x{height}",
         )
