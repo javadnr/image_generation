@@ -96,15 +96,16 @@ def plan_usd_cost(plan: str) -> float | None:
         return None
 
 
-def plan_price_toman(plan: str) -> int | None:
-    """Plan price in Tomans, rounded UP to the nearest ROUND_UNIT.
+def plan_price_toman(plan: str, discount_pct: int = 0) -> int | None:
+    """Plan price in Tomans, discount applied first, then rounded UP.
 
     Returns None when the price cannot be computed (missing cost data or
     no cached FX rate). Callers must not sell at None — block the purchase.
     """
+    from bot.services.discounts import discounted_price
     usd = plan_usd_cost(plan)
     rate = _cache["rate"]
     if usd is None or not rate:
         logger.warning("Cannot price plan %s (usd=%s rate=%s)", plan, usd, rate)
         return None
-    return ceil_price(usd * rate)
+    return discounted_price(ceil_price(usd * rate), discount_pct)

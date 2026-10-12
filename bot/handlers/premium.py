@@ -16,6 +16,7 @@ from bot.services.payment import (
     create_bale_purchase, get_bale_payment_provider,
 )
 from bot.services.pricing import plan_price_toman, last_known_rate
+from bot.services.discounts import get_active_discounts, discount_for
 from bot.keyboards.inline import premium_menu
 from bot.keyboards.reply import main_menu
 from bot.db.engine import async_session
@@ -75,7 +76,18 @@ def _fx_note_text() -> str:
     return (note + "\n") if note else ""
 
 
-def premium_text(user) -> str:
+def _plan_header(emoji: str, tier: str, discounts: dict | None) -> str:
+    from bot.services.discounts import discount_info
+    pct, exp = discount_info(tier, discounts)
+    line = f"{emoji} {texts.TIER_NAMES_FA[tier]} — {tooman_display(plan_price_toman(tier, pct))}"
+    if pct:
+        line += f" 🔥 {pct}٪ تخفیف"
+        if exp:
+            line += f" تا {exp.strftime('%Y/%m/%d')}"
+    return line
+
+
+def premium_text(user, discounts: dict | None = None) -> str:
     if user.tier != "free" and user.premium_expire_date:
         expire = user.premium_expire_date.strftime("%Y/%m/%d")
         remaining = (user.premium_expire_date.date() - datetime.now().date()).days
@@ -100,11 +112,11 @@ def premium_text(user) -> str:
         f"📅 همه پلن‌ها ماهانه هستند.\n\n"
         f"🆓 پلن رایگان\n"
         f"• {settings.FREE_USAGE_TOKEN:,} اعتبار\n\n"
-        f"🥉 برنزی — {tooman_display(plan_price_toman('bronze'))}\n"
+        f"{_plan_header('🥉', 'bronze', discounts)}\n"
         f"• {plan_allowance('bronze'):,} اعتبار\n\n"
-        f"🥈 نقره‌ای — {tooman_display(plan_price_toman('silver'))} ⭐ محبوب‌ترین\n"
+        f"{_plan_header('🥈', 'silver', discounts)} ⭐ محبوب‌ترین\n"
         f"• {plan_allowance('silver'):,} اعتبار\n\n"
-        f"🥇 طلایی — {tooman_display(plan_price_toman('gold'))} 🔥 بیشترین اعتبار\n"
+        f"{_plan_header('🥇', 'gold', discounts)} 🔥 بیشترین اعتبار\n"
         f"• {plan_allowance('gold'):,} اعتبار\n\n"
         f"📌 توجه: تعداد تصاویر نمایش‌داده‌شده بر اساس کیفیت پایین است. "
         f"تولید تصویر با کیفیت بالاتر، از موجودی شما بیشتر کم می‌کند.\n"
@@ -114,14 +126,16 @@ def premium_text(user) -> str:
     )
 
 
-async def answer_quota_exceeded(message: Message, session, user) -> None:
+async def answer_quota_exceeded(message: Message, session, user, discounts: dict | None = None) -> None:
     """Tell the user they must buy for more, then show the plans."""
     await maybe_log_free_limit(session, user)
     if user.tier == "free":
         await message.answer(badge(texts.LIMIT_REACHED_BUY))
     else:
         await message.answer(badge(texts.INSUFFICIENT_BALANCE))
-    await message.answer(premium_text(user), reply_markup=premium_menu(user))
+    if discounts is None:
+        discounts = await get_active_discounts(session)
+    await message.answer(premium_text(user, discounts), reply_markup=premium_menu(user, discounts))
 
 
 @router.message(F.text == texts.MAIN_MENU_PREMIUM)
@@ -129,13 +143,15 @@ async def premium(message: Message, session):
     user = await get_or_create_user(session, message.from_user.id)
     await log_event(session, user, BUY_SUBSCRIPTION_CLICKED)
     await log_event(session, user, PRICING_VIEWED)
-    await message.answer(premium_text(user), reply_markup=premium_menu(user))
+    discounts = await get_active_discounts(session)
+    await message.answer(premium_text(user, discounts), reply_markup=premium_menu(user, discounts))
 
 
 @router.callback_query(F.data == "show_plans")
 async def show_plans(callback: CallbackQuery, session):
     user = await get_or_create_user(session, callback.from_user.id)
-    await callback.message.answer(premium_text(user), reply_markup=premium_menu(user))
+    discounts = await get_active_discounts(session)
+    await callback.message.answer(premium_text(user, discounts), reply_markup=premium_menu(user, discounts))
     await callback.answer()
 
 
@@ -147,11 +163,13 @@ async def buy_tier(callback: CallbackQuery, session):
         return
 
     user = await get_or_create_user(session, callback.from_user.id)
-    await log_event(session, user, PLAN_SELECTED, {"plan": tier, "price": plan_price_toman(tier)})
+    discounts = await get_active_discounts(session)
+    pct = discount_for(tier, discounts)
+    await log_event(session, user, PLAN_SELECTED, {"plan": tier, "price": plan_price_toman(tier, pct), "discount_pct": pct})
 
     try:
         if settings.API_SERVER == "bale":
-            result = await create_bale_purchase(session, user, tier)
+            result = await create_bale_purchase(session, user, tier, pct)
             await log_event(
                 session, user, PAYMENT_STARTED,
                 {"plan": tier, "amount": result["amount_toman"], "provider": "bale"},
@@ -160,7 +178,7 @@ async def buy_tier(callback: CallbackQuery, session):
 
             bale_provider = get_bale_payment_provider()
             if not bale_provider:
-                await callback.message.answer(badge("⚠️ پرداخت Bale در دسترس نیست."), reply_markup=premium_menu(user))
+                await callback.message.answer(badge("⚠️ پرداخت Bale در دسترس نیست."), reply_markup=premium_menu(user, discounts))
                 return
 
             await bale_provider.send_invoice(
@@ -171,7 +189,7 @@ async def buy_tier(callback: CallbackQuery, session):
                 prices=result["prices"],
             )
         else:
-            result = await create_zarinpal_purchase(session, user, tier)
+            result = await create_zarinpal_purchase(session, user, tier, pct)
             await log_event(
                 session, user, PAYMENT_STARTED,
                 {"plan": tier, "amount": result["amount_toman"], "provider": "zarinpal"},
@@ -249,5 +267,6 @@ async def handle_check_payment(callback: CallbackQuery, session):
 @router.callback_query(F.data == "back_premium")
 async def back_to_premium(callback: CallbackQuery, session):
     user = await get_or_create_user(session, callback.from_user.id)
-    await callback.message.edit_text(premium_text(user), reply_markup=premium_menu(user))
+    discounts = await get_active_discounts(session)
+    await callback.message.edit_text(premium_text(user, discounts), reply_markup=premium_menu(user, discounts))
     await callback.answer()

@@ -87,7 +87,8 @@ ADMIN_STATS = (
     "  /activate <tier> <user_id> — فعال‌سازی اشتراک\n"
     "  /deactivate <user_id> — بازگشت به رایگان\n"
     "  /userinfo <user_id> — اطلاعات کاربر\n"
-    "  /broadcast <متن> — ارسال همگانی"
+    "  /broadcast <متن> — ارسال همگانی\n"
+    "  /off <plan|all> <percent> <days> — تخفیف مدت‌دار"
 )
 ADMIN_TOGGLE_ON = "🟢 ربات فعال شد."
 ADMIN_TOGGLE_OFF = "🔴 ربات غیرفعال شد."
@@ -113,3 +114,12 @@ ADMIN_REPORT = "💎 اکانت پریمیوم فعال شد\n👤 کاربر: {
 ADMIN_BROADCAST_USAGE = "استفاده:\n/broadcast متن پیام\nیا روی یک پیام ریپلای کنید و بنویسید:\n/broadcast"
 ADMIN_BROADCAST_STARTED = "⏳ ارسال همگانی شروع شد..."
 ADMIN_BROADCAST_DONE = "✅ ارسال همگانی تمام شد\n✔️ موفق: {ok}\n❌ ناموفق: {fail}"
+ADMIN_OFF_USAGE = "استفاده:\n/off <bronze|silver|gold|all> <percent> <days>\nمثال:\n/off bronze 15 1\n/off all 10 1\nبرای لغو: درصد را ۰ بگذارید."
+ADMIN_OFF_DONE = "✅ تخفیف {percent}٪ برای {scope} تا {until} فعال شد."
+ADMIN_OFF_CLEARED = "✅ تخفیف {scope} لغو شد."
+DISCOUNT_ANNOUNCE = (
+    "🎉 تخفیف ویژه! 🎉\n\n"
+    "💎 {detail}\n\n"
+    "⏳ فقط تا {until} معتبر است — بشتابید!\n"
+    "برای خرید، دکمه زیر را بزنید. 👇"
+)

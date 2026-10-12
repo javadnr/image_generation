@@ -82,6 +82,16 @@ class Transaction(Base):
     )
 
 
+class Discount(Base):
+    __tablename__ = "discounts"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    scope = Column(String(20), nullable=False)  # plan name or "all"
+    percent = Column(Integer, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class BotSettings(Base):
     __tablename__ = "bot_settings"
 

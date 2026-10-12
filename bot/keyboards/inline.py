@@ -25,13 +25,15 @@ def force_join() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def premium_menu(user) -> InlineKeyboardMarkup:
+def premium_menu(user, discounts: dict | None = None) -> InlineKeyboardMarkup:
+    from bot.services.discounts import discount_for
     buttons = []
     if user.tier == "free":
         tier_tags = {"bronze": "", "silver": "⭐ محبوب‌ترین", "gold": "🔥 بیشترین اعتبار"}
         for tier, emoji in [("bronze", "🥉"), ("silver", "🥈"), ("gold", "🥇")]:
-            price = plan_price_toman(tier)
-            tag = tier_tags[tier]
+            pct = discount_for(tier, discounts)
+            price = plan_price_toman(tier, pct)
+            tag = f"🔥 {pct}٪ تخفیف {tier_tags[tier]}".strip() if pct else tier_tags[tier]
             price_text = (
                 f"{to_persian_digits(price // 1000)} هزار تومان"
                 if price is not None else "قیمت نامشخص"

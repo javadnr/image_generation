@@ -12,9 +12,9 @@ from bot.services.bale_payment import BalePaymentProvider
 
 logger = logging.getLogger(__name__)
 
-def _plan_amount(plan: str) -> int:
+def _plan_amount(plan: str, discount_pct: int = 0) -> int:
     from bot.services.pricing import plan_price_toman
-    amount = plan_price_toman(plan)
+    amount = plan_price_toman(plan, discount_pct)
     if amount is None:
         raise ValueError(f"Cannot price plan {plan}: missing cost data or FX rate")
     return amount
@@ -77,7 +77,9 @@ async def deactivate_plan(session: AsyncSession, user: User) -> None:
     )
 
 
-async def create_zarinpal_purchase(session: AsyncSession, user: User, plan: str) -> dict:
+async def create_zarinpal_purchase(
+    session: AsyncSession, user: User, plan: str, discount_pct: int = 0,
+) -> dict:
     existing, remaining = await _find_pending_tx(session, user.id, plan)
     if existing and existing.payment_authority:
         payment_link = f"https://www.zarinpal.com/pg/StartPay/{existing.payment_authority}"
@@ -101,7 +103,7 @@ async def create_zarinpal_purchase(session: AsyncSession, user: User, plan: str)
         await session.delete(tx)
     await session.commit()
 
-    amount = _plan_amount(plan)
+    amount = _plan_amount(plan, discount_pct)
     client = get_zarinpal_client()
     authority, payment_link = await client.request_payment(amount, f"اشتراک {plan}")
 
@@ -166,7 +168,9 @@ async def verify_zarinpal_payment(session: AsyncSession, tx_id: str) -> dict:
         return {"success": False, "reason": f"code_{code}"}
 
 
-async def create_bale_purchase(session: AsyncSession, user: User, plan: str) -> dict:
+async def create_bale_purchase(
+    session: AsyncSession, user: User, plan: str, discount_pct: int = 0,
+) -> dict:
     result = await session.execute(
         select(Transaction).where(
             Transaction.user_id == user.id,
@@ -178,7 +182,7 @@ async def create_bale_purchase(session: AsyncSession, user: User, plan: str) -> 
         await session.delete(tx)
     await session.commit()
 
-    amount = _plan_amount(plan)
+    amount = _plan_amount(plan, discount_pct)
     tx = Transaction(
         id=str(uuid.uuid4()),
         user_id=user.id,

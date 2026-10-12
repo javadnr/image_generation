@@ -11,7 +11,7 @@ from bot.services.user import (
 from bot.services import analytics as az
 from bot.services.models import images_per_quality, default_model
 from bot.services.payment import activate_plan, deactivate_plan
-from bot.keyboards.inline import admin_status
+from bot.keyboards.inline import admin_status, plans_button
 from bot.keyboards.reply import main_menu
 from bot.db.engine import async_session
 from sqlalchemy import select, update
@@ -294,6 +294,84 @@ async def broadcast_cmd(message: Message, session):
             )
         except Exception:
             logger.exception("Failed to send broadcast summary")
+
+    asyncio.create_task(_run())
+
+
+async def _fanout(bot, user_ids, text, reply_markup) -> tuple:
+    """Send to many users respecting Telegram flood limits.
+
+    ~20 msg/sec pace; on TelegramRetryAfter waits the requested time and
+    retries once. Returns (ok, fail). Never raises.
+    """
+    from aiogram.exceptions import TelegramRetryAfter
+    ok = fail = 0
+    for uid in user_ids:
+        try:
+            await bot.send_message(uid, text, reply_markup=reply_markup)
+            ok += 1
+        except TelegramRetryAfter as e:
+            wait = (e.retry_after or 0) + 1
+            logger.warning("Flood control hit, waiting %ss before retry", wait)
+            await asyncio.sleep(wait)
+            try:
+                await bot.send_message(uid, text, reply_markup=reply_markup)
+                ok += 1
+            except Exception:
+                logger.exception("Broadcast retry failed for user %d", uid)
+                fail += 1
+        except Exception:
+            logger.exception("Broadcast failed for user %d", uid)
+            fail += 1
+        await asyncio.sleep(0.05)
+    return ok, fail
+
+
+@router.message(F.text.startswith("/off"))
+async def off_cmd(message: Message, session):
+    if message.from_user.id not in settings.ADMIN_IDS:
+        return
+
+    from bot.services.discounts import (
+        parse_off_command, set_discount, get_active_discounts, free_user_ids,
+    )
+    parsed = parse_off_command(message.text)
+    if parsed is None:
+        await message.answer(badge(texts.ADMIN_OFF_USAGE))
+        return
+    scope, percent, days = parsed
+    await set_discount(session, scope, percent, days)
+
+    if percent == 0:
+        await message.answer(badge(texts.ADMIN_OFF_CLEARED.format(scope=scope)))
+        return
+
+    discounts = await get_active_discounts(session)
+    exp = discounts.get(scope, (0, None))[1]
+    until = exp.strftime("%Y/%m/%d") if exp else "—"
+    scope_name = "همه پلن‌ها" if scope == "all" else f"پلن {texts.TIER_NAMES_FA.get(scope, scope)}"
+    await message.answer(badge(texts.ADMIN_OFF_DONE.format(
+        percent=percent, scope=scope_name, until=until,
+    )))
+
+    user_ids = await free_user_ids(session)
+    if not user_ids:
+        return
+
+    detail = f"{percent}٪ تخفیف روی {scope_name}"
+    text = badge(texts.DISCOUNT_ANNOUNCE.format(detail=detail, until=until))
+    bot = message.bot
+    admin_chat_id = message.chat.id
+
+    async def _run():
+        ok, fail = await _fanout(bot, user_ids, text, plans_button())
+        try:
+            await bot.send_message(
+                admin_chat_id,
+                badge(texts.ADMIN_BROADCAST_DONE.format(ok=ok, fail=fail)),
+            )
+        except Exception:
+            logger.exception("Failed to send discount broadcast summary")
 
     asyncio.create_task(_run())
 
