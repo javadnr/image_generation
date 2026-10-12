@@ -151,6 +151,32 @@ async def test_precheck_allows_sufficient_balance(db, catalog):
 
 
 @pytest.mark.asyncio
+async def test_precheck_uses_raw_minimum_without_profit(db, catalog):
+    # low minimum is 200 raw; profit would require 240 — gate uses 200
+    user = await _make_user(
+        db, 1014, tier="bronze", token_balance=220,
+        model="gpt-image-2.5-flare", quality="low",
+    )
+    await db.commit()
+    assert await user_svc.can_generate(db, user) is True
+
+    user.token_balance = 199
+    await db.commit()
+    assert await user_svc.can_generate(db, user) is False
+
+
+@pytest.mark.asyncio
+async def test_overrun_deduct_floors_at_zero(db, catalog):
+    # 300 balance, 333 actual -> 400 charged -> delivered, balance 0
+    user = await _make_user(db, 1015, tier="bronze", token_balance=300)
+    await db.commit()
+
+    assert await user_svc.can_generate(db, user) is True
+    assert await user_svc.deduct_tokens(db, user, 333) == 0
+    assert user.token_balance == 0
+
+
+@pytest.mark.asyncio
 async def test_deduct_applies_profit_once(db, catalog):
     # 20% profit: 200->240, 500->600, 501->602, 1200->1440
     user = await _make_user(db, 1006, tier="bronze", token_balance=10000)

@@ -22,9 +22,15 @@ async def get_or_create_user(session: AsyncSession, telegram_id: int) -> User:
 
 
 async def can_generate(session: AsyncSession, user: User) -> bool:
-    """Unified pre-check for every tier: balance must cover one effective image."""
-    from bot.services.models import effective_estimate, default_model
-    required = effective_estimate(
+    """Unified pre-check for every tier.
+
+    The minimum is the raw configured estimate for the selected model and
+    quality (e.g. 200 for Low) — profit is NOT added here. Actual cost,
+    including profit, is deducted afterwards and may exceed the balance,
+    flooring it at zero.
+    """
+    from bot.services.models import estimate_tokens, default_model
+    required = estimate_tokens(
         user.image_model or default_model(),
         user.image_quality or "low",
     )

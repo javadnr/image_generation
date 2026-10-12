@@ -13,7 +13,7 @@ from bot.services.queue import acquire_queue, release_queue
 from bot.services.image import edit_image
 from bot.services.report import send_error_report, send_processed_report
 from bot.services.models import charge_for
-from bot.keyboards.inline import premium_menu
+from bot.keyboards.inline import premium_menu, plans_button
 from bot.texts import badge
 import bot.texts as texts
 
@@ -63,16 +63,15 @@ async def handle_photo_edit(message: Message, session, bot):
             os.unlink(tmp.name)
         await gen_msg.delete()
 
-        # Exact actual API usage plus profit; deducted only after a successful edit.
-        await deduct_tokens(session, user, tokens)
-        await log_event(session, user, IMAGE_GENERATION_SUCCESS, {"tier": user.tier})
-
+        # Caption predicts the post-deduction balance; the actual
+        # deduction happens after successful delivery below.
         if tokens is not None:
             charged = charge_for(tokens)
+            remaining = max(0, (user.token_balance or 0) - charged)
             caption = (
                 f"✅ {(prompt or '')[:60]}\n"
                 f"💳 مصرف: {charged:,} اعتبار | "
-                f"باقی‌مانده: {user.token_balance:,} اعتبار"
+                f"باقی‌مانده: {remaining:,} اعتبار"
             )
         else:
             caption = f"✅ {prompt[:100]}"
@@ -90,6 +89,14 @@ async def handle_photo_edit(message: Message, session, bot):
             await message.answer_photo(
                 photo=photo,
                 caption=caption,
+            )
+
+        await deduct_tokens(session, user, tokens)
+        await log_event(session, user, IMAGE_GENERATION_SUCCESS, {"tier": user.tier})
+        if (user.token_balance or 0) == 0:
+            await message.answer(
+                badge(texts.CREDIT_SPENT),
+                reply_markup=plans_button(),
             )
 
         await send_processed_report(
