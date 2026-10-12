@@ -28,6 +28,7 @@ def catalog(monkeypatch):
     monkeypatch.setattr(settings, "BRONZE_MAX_TOKEN", TEST_PLAN_TOKENS["BRONZE_MAX_TOKEN"])
     monkeypatch.setattr(settings, "SILVER_MAX_TOKEN", TEST_PLAN_TOKENS["SILVER_MAX_TOKEN"])
     monkeypatch.setattr(settings, "GOLD_MAX_TOKEN", TEST_PLAN_TOKENS["GOLD_MAX_TOKEN"])
+    monkeypatch.setattr(settings, "PROFIT_PERCENTAGE", 20.0)
     yield
 
 
@@ -92,10 +93,10 @@ def test_quality_breakdown_math(catalog, monkeypatch):
     from bot.handlers import premium as premium_h
     monkeypatch.setattr(settings, "IMAGE_EDIT_COST_TOKENS", 4000)
 
-    # 10,000 tokens @ 200/443/1760 per image + 4000-cost edits
-    assert premium_h._quality_breakdown(10000) == "50 پایین | 22 متوسط | 5 بالا | 2 ویرایش"
-    assert premium_h._quality_breakdown(25000) == "125 پایین | 56 متوسط | 14 بالا | 6 ویرایش"
-    assert premium_h._quality_breakdown(60000) == "300 پایین | 135 متوسط | 34 بالا | 15 ویرایش"
+    # 20% profit: bronze 41/18/4 + 2 edits, silver 104/46/11 + 6, gold 250/112/28 + 15
+    assert premium_h._quality_breakdown(10000) == "41 پایین | 18 متوسط | 4 بالا | 2 ویرایش"
+    assert premium_h._quality_breakdown(25000) == "104 پایین | 46 متوسط | 11 بالا | 6 ویرایش"
+    assert premium_h._quality_breakdown(60000) == "250 پایین | 112 متوسط | 28 بالا | 15 ویرایش"
 
 
 def test_quality_breakdown_text_lists_all_plans(catalog):
@@ -103,7 +104,7 @@ def test_quality_breakdown_text_lists_all_plans(catalog):
 
     text = premium_h._quality_breakdown_text()
     assert "🥉" in text and "🥈" in text and "🥇" in text
-    assert "50 پایین" in text
+    assert "41 پایین" in text
 
 
 def test_fx_note_shows_cached_rate(catalog):
@@ -127,13 +128,13 @@ def test_fx_note_hidden_without_rate(catalog):
 def test_used_credits_math(catalog):
     from bot.services.models import used_credits
 
-    # Spec examples with low estimate 500: 200->1, 500->1, 501->2, 700->2, 1200->3
+    # 20% profit on the low_effective basis passed in
     assert used_credits(200, 500) == 1
-    assert used_credits(500, 500) == 1
+    assert used_credits(500, 500) == 2
     assert used_credits(501, 500) == 2
     assert used_credits(700, 500) == 2
     assert used_credits(1200, 500) == 3
-    assert used_credits(700, 200) == 4
+    assert used_credits(700, 200) == 5
     assert used_credits(None, 200) is None
     assert used_credits(500, None) is None
     assert used_credits(0, 200) is None
@@ -164,6 +165,22 @@ def test_plan_breakdown_includes_edits(catalog, monkeypatch):
     assert "15 ویرایش" in text
 
 
+def test_quality_estimates_text(catalog):
+    from types import SimpleNamespace
+    from bot.handlers import quality as quality_h
+
+    user = SimpleNamespace(token_balance=20000, image_model="gpt-image-2.5-flare")
+    text = quality_h._estimates_text(user)
+    # 20000 @ 240/532/2112 (20% profit on 200/443/1760)
+    assert "83" in text
+    assert "37" in text
+    assert "9" in text
+
+    broke = SimpleNamespace(token_balance=0, image_model="gpt-image-2.5-flare")
+    zero_text = quality_h._estimates_text(broke)
+    assert "0 تصویر" in zero_text
+
+
 def test_model_help_text(catalog):
     import bot.texts as texts
 
@@ -177,9 +194,9 @@ def test_model_help_text(catalog):
 def test_images_per_quality_math(catalog):
     from bot.services.models import images_per_quality
 
-    # user example: 20,000 tokens → 100 / 45 / 11
+    # 20% profit: effective 240/532/2112 → 83 / 37 / 9
     assert images_per_quality(20000, "gpt-image-2.5-flare") == {
-        "low": 100, "medium": 45, "high": 11,
+        "low": 83, "medium": 37, "high": 9,
     }
     assert images_per_quality(0, "gpt-image-2.5-flare") == {
         "low": 0, "medium": 0, "high": 0,

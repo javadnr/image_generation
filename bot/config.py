@@ -19,7 +19,8 @@ class Settings(BaseSettings):
     BRONZE_QUEUE_SIZE: int = 10
     SILVER_QUEUE_SIZE: int = 25
     GOLD_QUEUE_SIZE: int = 0
-    FREE_LIMIT: int = 2
+    FREE_USAGE_TOKEN: int = 1000
+    PROFIT_PERCENTAGE: float = 0.0
     IMAGE_EDIT_COST_TOKENS: int = 4000
     BRONZE_MAX_TOKEN: int = 10000
     SILVER_MAX_TOKEN: int = 25000

@@ -1,14 +1,14 @@
 from datetime import datetime
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-from bot.services.user import get_or_create_user, get_tier_limit, get_edit_cost
+from bot.services.user import get_or_create_user, get_edit_cost
 from bot.services.report import send_premium_report
 from bot.services.analytics import (
     log_event, maybe_log_free_limit, PRICING_VIEWED, BUY_SUBSCRIPTION_CLICKED,
     PLAN_SELECTED, PAYMENT_STARTED,
 )
 from bot.services.models import (
-    plan_allowance, estimate_tokens, default_model, images_per_quality,
+    plan_allowance, default_model, images_per_quality,
     edits_available,
 )
 from bot.services.payment import (
@@ -35,25 +35,24 @@ def tooman_display(price: int | None) -> str:
     return f"{thousands} هزار تومان"
 
 
-QUALITY_ORDER = ("low", "medium", "high")
 QUALITY_FA = {"low": "پایین", "medium": "متوسط", "high": "بالا"}
 
 
 def _plan_images_text(plan: str, allowance: int) -> str:
     """Approximate image count for a plan allowance (Low-quality basis)."""
-    estimate = estimate_tokens(default_model(), "low")
-    if estimate:
-        return f"• تقریباً {allowance // estimate:,} تصویر"
+    low = images_per_quality(allowance, default_model()).get("low")
+    if low is not None:
+        return f"• تقریباً {low:,} تصویر"
     return f"• تقریباً {allowance:,} تصویر"
 
 
 def _quality_breakdown(allowance: int) -> str | None:
-    """Per-quality approximate image counts, e.g. '50 پایین | 22 متوسط | 5 بالا'."""
-    parts = []
-    for quality in QUALITY_ORDER:
-        estimate = estimate_tokens(default_model(), quality)
-        if estimate:
-            parts.append(f"{allowance // estimate:,} {QUALITY_FA[quality]}")
+    """Per-quality approximate image counts, profit-adjusted."""
+    per_quality = images_per_quality(allowance, default_model())
+    parts = [
+        f"{count:,} {QUALITY_FA[quality]}"
+        for quality, count in per_quality.items()
+    ]
     parts.append(f"{edits_available(allowance, get_edit_cost())} ویرایش")
     return " | ".join(parts) if parts else None
 
@@ -107,7 +106,7 @@ def premium_text(user) -> str:
         f"با خرید پریمیوم، تصاویر با کیفیت تر بساز! 🚀\n"
         f"📅 همه پلن‌ها ماهانه هستند.\n\n"
         f"🆓 پلن رایگان\n"
-        f"• {get_tier_limit('free')} تصویر رایگان\n\n"
+        f"• {settings.FREE_USAGE_TOKEN:,} اعتبار\n\n"
         f"🥉 برنزی — {tooman_display(plan_price_toman('bronze'))}\n"
         f"{_plan_images_text('bronze', plan_allowance('bronze'))}\n\n"
         f"🥈 نقره‌ای — {tooman_display(plan_price_toman('silver'))} ⭐ محبوب‌ترین\n"

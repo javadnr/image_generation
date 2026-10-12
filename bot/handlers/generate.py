@@ -2,7 +2,7 @@ import logging
 from aiogram import Router, F
 from aiogram.types import Message, BufferedInputFile
 from bot.config import settings
-from bot.services.user import get_or_create_user, can_generate, consume_quota, deduct_tokens, set_generating, get_remaining
+from bot.services.user import get_or_create_user, can_generate, deduct_tokens, set_generating
 from bot.services.analytics import (
     log_event, maybe_log_first_generation_start,
     IMAGE_GENERATION_STARTED, IMAGE_GENERATION_SUCCESS, IMAGE_GENERATION_FAILED,
@@ -11,7 +11,7 @@ from bot.services.analytics import (
 from bot.handlers.premium import answer_quota_exceeded
 from bot.services.queue import acquire_queue, release_queue
 from bot.services.image import generate_image, TIER_MODELS
-from bot.services.models import default_model, estimate_tokens, used_credits
+from bot.services.models import default_model, credit_usage, images_per_quality
 from bot.services.report import send_error_report, send_processed_report
 from bot.keyboards.reply import main_menu
 from bot.keyboards.inline import plans_button
@@ -85,20 +85,15 @@ async def handle_generate(message: Message, session):
 
         await gen_msg.delete()
 
+        model_id = user.image_model or default_model()
+        quality = user.image_quality or "low"
+        used, remaining_imgs = credit_usage(user.token_balance or 0, tokens, model_id)
         credit_line = None
-        if user.tier == "free":
-            remaining_after = max(0, (await get_remaining(session, user)) - 1)
-            credit_line = f"💳 مصرف: 1 اعتبار | باقی‌مانده: {remaining_after} تصویر"
-        else:
-            model_id = user.image_model or default_model()
-            low_est = estimate_tokens(model_id, "low")
-            used = used_credits(tokens, low_est)
-            if used is not None:
-                remaining_imgs = max(0, (user.token_balance or 0) - (tokens or 0)) // low_est
-                credit_line = (
-                    f"💳 مصرف: {used} اعتبار | "
-                    f"باقی‌مانده: {remaining_imgs} تصویر"
-                )
+        if used is not None:
+            credit_line = (
+                f"💳 مصرف: {used} اعتبار | "
+                f"باقی‌مانده: {remaining_imgs} تصویر"
+            )
         if credit_line:
             caption = f"✅ {(message.text or '')[:60]}\n{credit_line}"
         else:
@@ -119,23 +114,19 @@ async def handle_generate(message: Message, session):
                 caption=caption,
             )
 
-        if user.tier == "free":
-            await consume_quota(session, user)
-        else:
-            await deduct_tokens(session, user, tokens)
+        await deduct_tokens(session, user, tokens)
         await log_event(session, user, IMAGE_GENERATION_SUCCESS, {"tier": user.tier})
-        if user.tier == "free":
-            remaining = await get_remaining(session, user)
-            if remaining == 1:
-                await message.answer(
-                    badge("🎁 فقط ۱ فرصت رایگان باقی مانده!"),
-                    reply_markup=plans_button(),
-                )
-            elif remaining == 0:
-                await message.answer(
-                    badge("⚠️ اعتبار رایگان شما تمام شد!\nبرای ادامه ساخت تصویر، اشتراک تهیه کنید 👇"),
-                    reply_markup=plans_button(),
-                )
+        left = images_per_quality(user.token_balance or 0, model_id).get(quality)
+        if left == 0:
+            await message.answer(
+                badge(texts.CREDIT_SPENT),
+                reply_markup=plans_button(),
+            )
+        elif left == 1:
+            await message.answer(
+                badge(texts.CREDIT_LOW),
+                reply_markup=plans_button(),
+            )
         await send_processed_report(
             message.bot,
             user_id=message.from_user.id,
@@ -143,7 +134,7 @@ async def handle_generate(message: Message, session):
             prompt=message.text or "",
             tokens=tokens,
             image_bytes=image_bytes,
-            remaining=user.token_balance if user.tier != "free" else None,
+            remaining=user.token_balance,
         )
 
     except Exception as e:

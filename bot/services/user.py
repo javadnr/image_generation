@@ -10,16 +10,11 @@ from bot.utils.timezone import tehran_day_utc_window, today_in_tehran
 logger = logging.getLogger(__name__)
 
 
-def get_tier_limit(tier: str) -> int:
-    # Only the free tier uses image-count limits now; premium is token-based.
-    return settings.FREE_LIMIT if tier == "free" else 0
-
-
 async def get_or_create_user(session: AsyncSession, telegram_id: int) -> User:
     result = await session.execute(select(User).where(User.telegram_id == telegram_id))
     user = result.scalar_one_or_none()
     if user is None:
-        user = User(telegram_id=telegram_id)
+        user = User(telegram_id=telegram_id, token_balance=settings.FREE_USAGE_TOKEN)
         session.add(user)
         await session.commit()
         await session.refresh(user)
@@ -27,44 +22,33 @@ async def get_or_create_user(session: AsyncSession, telegram_id: int) -> User:
 
 
 async def can_generate(session: AsyncSession, user: User) -> bool:
-    if user.tier == "free":
-        return user.daily_used < get_tier_limit("free")
-    estimate = estimate_tokens_for(user)
-    if estimate is None:
+    """Unified pre-check for every tier: balance must cover one effective image."""
+    from bot.services.models import effective_estimate, default_model
+    required = effective_estimate(
+        user.image_model or default_model(),
+        user.image_quality or "low",
+    )
+    if required is None:
         logger.warning(
             "No token estimate for model=%s quality=%s; allowing generation",
             user.image_model, user.image_quality,
         )
         return True
-    return (user.token_balance or 0) >= estimate
-
-
-def estimate_tokens_for(user: User) -> int | None:
-    from bot.services.models import estimate_tokens, default_model
-    return estimate_tokens(
-        user.image_model or default_model(),
-        user.image_quality or "low",
-    )
+    return (user.token_balance or 0) >= required
 
 
 async def deduct_tokens(session: AsyncSession, user: User, amount: int | None) -> int:
-    """Deduct the exact actual output tokens. Floors at zero. Returns balance."""
+    """Deduct actual API usage plus profit, applied exactly once.
+
+    Floors the balance at zero. Returns remaining token balance.
+    """
+    from bot.services.models import charge_for
     if amount is None:
         logger.warning("No usage reported for user=%d; deducting 0", user.telegram_id)
-        amount = 0
-    user.token_balance = max(0, (user.token_balance or 0) - amount)
+    charged = charge_for(amount)
+    user.token_balance = max(0, (user.token_balance or 0) - charged)
     await session.commit()
     return user.token_balance
-
-
-async def consume_quota(session: AsyncSession, user: User) -> None:
-    user.daily_used += 1
-    await session.commit()
-
-
-async def get_remaining(session: AsyncSession, user: User) -> int:
-    limit = get_tier_limit(user.tier)
-    return max(0, limit - user.daily_used)
 
 
 def get_edit_cost() -> int:
@@ -84,7 +68,9 @@ async def set_tier(session: AsyncSession, telegram_id: int, tier: str) -> User |
     user = result.scalar_one_or_none()
     if user:
         user.tier = tier
-        user.token_balance = plan_allowance(tier)
+        user.token_balance = (
+            plan_allowance(tier) if tier != "free" else settings.FREE_USAGE_TOKEN
+        )
         await session.commit()
         await session.refresh(user)
     return user
@@ -170,11 +156,18 @@ async def get_tier_images_today(session: AsyncSession, tier: str) -> int:
     return sum(1 for (meta,) in result.all() if (meta or {}).get("tier") == tier)
 
 
-async def reset_all_daily(session: AsyncSession, include_free: bool = False) -> None:
-    stmt = update(User).values(daily_used=0, last_reset_date=today_in_tehran())
+async def reset_all_daily(session: AsyncSession, include_free: bool = True) -> None:
+    """Refill free users to the configured free credit grant.
+
+    Premium balances are paid for and never touched here.
+    """
     if not include_free:
-        stmt = stmt.where(User.tier != "free")
-    await session.execute(stmt)
+        return
+    await session.execute(
+        update(User)
+        .where(User.tier == "free")
+        .values(token_balance=settings.FREE_USAGE_TOKEN)
+    )
     await session.commit()
 
 

@@ -65,7 +65,7 @@ async def activate_plan(session: AsyncSession, user: User, plan: str) -> None:
 async def deactivate_plan(session: AsyncSession, user: User) -> None:
     user.tier = "free"
     user.premium_expire_date = None
-    user.token_balance = 0
+    user.token_balance = settings.FREE_USAGE_TOKEN
     await session.commit()
 
 

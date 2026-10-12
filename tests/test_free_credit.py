@@ -1,5 +1,4 @@
 import asyncio
-from datetime import date, timedelta
 
 import pytest
 import pytest_asyncio
@@ -36,12 +35,18 @@ async def db():
     await engine.dispose()
 
 
-async def _make_user(session, telegram_id, tier="free", daily_used=0, last_reset=None):
+@pytest.fixture
+def free_grant(monkeypatch):
+    from bot.config import settings
+    monkeypatch.setattr(settings, "FREE_USAGE_TOKEN", 1000)
+    return 1000
+
+
+async def _make_user(session, telegram_id, tier="free", token_balance=0):
     user = User(
         telegram_id=telegram_id,
         tier=tier,
-        daily_used=daily_used,
-        last_reset_date=last_reset or date.today(),
+        token_balance=token_balance,
     )
     session.add(user)
     await session.flush()
@@ -49,63 +54,63 @@ async def _make_user(session, telegram_id, tier="free", daily_used=0, last_reset
 
 
 @pytest.mark.asyncio
-async def test_free_credit_never_resets(db):
-    yesterday = date.today() - timedelta(days=1)
-    user = await _make_user(db, 801, tier="free", daily_used=2, last_reset=yesterday)
-    await db.commit()
-
-    await user_svc.reset_all_daily(db)
-    await db.refresh(user)
-    assert user.daily_used == 2
-    assert not await user_svc.can_generate(db, user)
+async def test_new_users_get_free_grant(db, free_grant):
+    user = await user_svc.get_or_create_user(db, 801)
+    assert user.tier == "free"
+    assert user.token_balance == 1000
 
 
 @pytest.mark.asyncio
-async def test_free_credit_usable_until_spent(db):
-    user = await _make_user(db, 802, tier="free", daily_used=0)
+async def test_existing_user_not_regranted(db, free_grant):
+    user = await _make_user(db, 802, tier="free", token_balance=250)
     await db.commit()
 
-    assert await user_svc.can_generate(db, user)
-    await user_svc.consume_quota(db, user)
-    assert await user_svc.can_generate(db, user)
+    same = await user_svc.get_or_create_user(db, 802)
+    assert same.id == user.id
+    assert same.token_balance == 250
 
 
 @pytest.mark.asyncio
-async def test_premium_gated_by_tokens_not_daily(db):
-    user = await _make_user(db, 803, tier="bronze")
-    await db.commit()
-    user.token_balance = 0
+async def test_free_precheck_and_deduct(db, free_grant, monkeypatch):
+    from bot.config import settings
+    monkeypatch.setattr(settings, "MODELS", {
+        "gpt-image-2.5-flare": {
+            "free": True,
+            "cost": {"low": {"cost": 0.006, "tokens": 200}},
+        },
+    })
+    monkeypatch.setattr(settings, "PROFIT_PERCENTAGE", 20.0)
+    user = await _make_user(db, 803, tier="free", token_balance=1000)
     await db.commit()
 
-    # no balance → blocked even with untouched daily counters
+    assert await user_svc.can_generate(db, user) is True
+    await user_svc.deduct_tokens(db, user, 200)
+    assert user.token_balance == 760
+    assert await user_svc.can_generate(db, user) is True
+    await user_svc.deduct_tokens(db, user, 800)
+    assert user.token_balance == 0
     assert await user_svc.can_generate(db, user) is False
 
 
 @pytest.mark.asyncio
-async def test_reset_all_daily_skips_free(db):
-    yesterday = date.today() - timedelta(days=1)
-    free = await _make_user(db, 804, tier="free", daily_used=2, last_reset=yesterday)
-    prem = await _make_user(db, 805, tier="silver", daily_used=25, last_reset=yesterday)
+async def test_reset_all_daily_refills_free_only(db, free_grant):
+    free = await _make_user(db, 804, tier="free", token_balance=120)
+    prem = await _make_user(db, 805, tier="silver", token_balance=5000)
     await db.commit()
 
     await user_svc.reset_all_daily(db)
 
     await db.refresh(free)
     await db.refresh(prem)
-    assert free.daily_used == 2
-    assert prem.daily_used == 0
+    assert free.token_balance == 1000
+    assert prem.token_balance == 5000
 
 
 @pytest.mark.asyncio
-async def test_reset_all_daily_include_free(db):
-    yesterday = date.today() - timedelta(days=1)
-    free = await _make_user(db, 806, tier="free", daily_used=2, last_reset=yesterday)
-    prem = await _make_user(db, 807, tier="silver", daily_used=25, last_reset=yesterday)
+async def test_set_tier_free_grants(db, free_grant):
+    user = await _make_user(db, 806, tier="bronze", token_balance=777)
     await db.commit()
 
-    await user_svc.reset_all_daily(db, include_free=True)
-
-    await db.refresh(free)
-    await db.refresh(prem)
-    assert free.daily_used == 0
-    assert prem.daily_used == 0
+    updated = await user_svc.set_tier(db, 806, "free")
+    assert updated.tier == "free"
+    assert updated.token_balance == 1000

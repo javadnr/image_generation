@@ -12,7 +12,13 @@ Schema per model id:
     }
 
 FALLBACK_MODELS keeps the bot working when MODELS is not configured.
+
+Profit (PROFIT_PERCENTAGE) is applied exactly once, at charge/display
+time, on top of raw estimates or actual API usage. All helpers below
+round float artifacts away before ceil/floor so boundary values are exact.
 """
+import math
+
 from bot.config import settings
 
 FALLBACK_MODELS = {
@@ -84,13 +90,6 @@ def estimate_tokens(model_id: str | None, quality: str | None) -> int | None:
 QUALITY_ORDER = ("low", "medium", "high")
 
 
-def used_credits(actual_tokens: int | None, low_estimate: int | None) -> int | None:
-    """Whole image credits consumed, rounded up. None when unknown."""
-    if not actual_tokens or not low_estimate:
-        return None
-    return -(-actual_tokens // low_estimate)
-
-
 def edits_available(balance: int, edit_cost: int | None) -> int:
     """Whole image edits affordable (floor division, partial edits impossible)."""
     if not edit_cost or edit_cost <= 0:
@@ -98,19 +97,71 @@ def edits_available(balance: int, edit_cost: int | None) -> int:
     return max(0, (balance or 0)) // edit_cost
 
 
+def profit_rate() -> float:
+    """1 + PROFIT_PERCENTAGE/100. 1.0 when unconfigured or invalid."""
+    try:
+        return 1.0 + float(settings.PROFIT_PERCENTAGE or 0) / 100
+    except (TypeError, ValueError):
+        return 1.0
+
+
+def _ceil(value: float) -> int:
+    return math.ceil(round(value, 6))
+
+
+def effective_estimate(model_id: str | None, quality: str | None) -> int | None:
+    """Profit-inclusive estimated tokens per image. None when unknown."""
+    estimate = estimate_tokens(model_id, quality)
+    if not estimate:
+        return None
+    return _ceil(estimate * profit_rate())
+
+
+def charge_for(actual_tokens: int | None) -> int:
+    """Token charge for actual API usage, profit applied exactly once."""
+    if not actual_tokens:
+        return 0
+    return _ceil(actual_tokens * profit_rate())
+
+
 def images_per_quality(balance: int, model_id: str | None) -> dict:
     """Approximate remaining images per quality (floor division).
 
-    Qualities with unknown estimates are skipped. Counts are estimates —
-    actual consumption varies per generation.
+    Uses profit-inclusive estimates. Qualities with unknown estimates are
+    skipped. Counts are estimates — actual consumption varies per generation.
     """
     model = model_id or default_model()
     out = {}
     for quality in QUALITY_ORDER:
-        estimate = estimate_tokens(model, quality)
-        if estimate:
-            out[quality] = balance // estimate
+        effective = effective_estimate(model, quality)
+        if effective:
+            out[quality] = (balance or 0) // effective
     return out
+
+
+def used_credits(actual_tokens: int | None, low_effective: int | None) -> int | None:
+    """Whole image credits consumed, rounded up. None when unknown."""
+    if not actual_tokens or not low_effective:
+        return None
+    charged = charge_for(actual_tokens)
+    return -(-charged // low_effective)
+
+
+def credit_usage(
+    balance_before: int, actual_tokens: int | None, model_id: str | None
+) -> tuple[int | None, int | None]:
+    """(used_credits, remaining_images) for result captions.
+
+    Both derived from the pre-deduction balance and actual API usage,
+    so captions predict exactly what deduct_tokens will produce.
+    """
+    low_effective = effective_estimate(model_id or default_model(), "low")
+    if low_effective is None or actual_tokens is None:
+        return None, None
+    charged = charge_for(actual_tokens)
+    used = -(-charged // low_effective)
+    remaining = max(0, (balance_before or 0) - charged) // low_effective
+    return used, remaining
 
 
 def plan_allowance(plan: str) -> int:

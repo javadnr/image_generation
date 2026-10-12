@@ -67,6 +67,8 @@ def catalog(monkeypatch):
     monkeypatch.setattr(settings, "BRONZE_MAX_TOKEN", TEST_PLAN_TOKENS["BRONZE_MAX_TOKEN"])
     monkeypatch.setattr(settings, "SILVER_MAX_TOKEN", TEST_PLAN_TOKENS["SILVER_MAX_TOKEN"])
     monkeypatch.setattr(settings, "GOLD_MAX_TOKEN", TEST_PLAN_TOKENS["GOLD_MAX_TOKEN"])
+    monkeypatch.setattr(settings, "PROFIT_PERCENTAGE", 20.0)
+    monkeypatch.setattr(settings, "FREE_USAGE_TOKEN", 1000)
     return TEST_MODELS
 
 
@@ -110,7 +112,7 @@ async def test_deactivate_zeroes_balance(db, catalog):
 
     await deactivate_plan(db, user)
     assert user.tier == "free"
-    assert user.token_balance == 0
+    assert user.token_balance == 1000
     assert user.premium_expire_date is None
 
 
@@ -123,7 +125,7 @@ async def test_set_tier_grants_allowance(db, catalog):
     assert updated.token_balance == 25000
 
     updated = await user_svc.set_tier(db, 1003, "free")
-    assert updated.token_balance == 0
+    assert updated.token_balance == 1000
 
 
 @pytest.mark.asyncio
@@ -149,16 +151,36 @@ async def test_precheck_allows_sufficient_balance(db, catalog):
 
 
 @pytest.mark.asyncio
-async def test_deduct_exact_actual_usage(db, catalog):
-    # exact API-reported tokens are deducted, no rounding
+async def test_deduct_applies_profit_once(db, catalog):
+    # 20% profit: 200->240, 500->600, 501->602, 1200->1440
     user = await _make_user(db, 1006, tier="bronze", token_balance=10000)
     await db.commit()
 
-    assert await user_svc.deduct_tokens(db, user, 200) == 9800
-    assert await user_svc.deduct_tokens(db, user, 500) == 9300
-    assert await user_svc.deduct_tokens(db, user, 501) == 8799
-    assert await user_svc.deduct_tokens(db, user, 1200) == 7599
-    assert user.token_balance == 7599
+    assert await user_svc.deduct_tokens(db, user, 200) == 9760
+    assert await user_svc.deduct_tokens(db, user, 500) == 9160
+    assert await user_svc.deduct_tokens(db, user, 501) == 8558
+    assert await user_svc.deduct_tokens(db, user, 1200) == 7118
+    assert user.token_balance == 7118
+
+
+@pytest.mark.asyncio
+async def test_deduct_zero_profit_is_exact(db, catalog, monkeypatch):
+    from bot.config import settings
+    monkeypatch.setattr(settings, "PROFIT_PERCENTAGE", 0.0)
+    user = await _make_user(db, 1012, tier="bronze", token_balance=10000)
+    await db.commit()
+
+    assert await user_svc.deduct_tokens(db, user, 1000) == 9000
+
+
+@pytest.mark.asyncio
+async def test_deduct_half_profit(db, catalog, monkeypatch):
+    from bot.config import settings
+    monkeypatch.setattr(settings, "PROFIT_PERCENTAGE", 50.0)
+    user = await _make_user(db, 1013, tier="bronze", token_balance=10000)
+    await db.commit()
+
+    assert await user_svc.deduct_tokens(db, user, 1000) == 8500
 
 
 @pytest.mark.asyncio
@@ -202,23 +224,23 @@ async def test_mixed_quality_sequence(db, catalog):
 
     assert await user_svc.can_generate(db, user) is True
     await user_svc.deduct_tokens(db, user, 200)
-    assert user.token_balance == 24800
+    assert user.token_balance == 24760
 
     user.image_quality = "high"
     assert await user_svc.can_generate(db, user) is True
     await user_svc.deduct_tokens(db, user, 2950)
-    assert user.token_balance == 21850
+    assert user.token_balance == 21220
 
 
 @pytest.mark.asyncio
-async def test_free_flow_regression(db, catalog):
-    user = await _make_user(db, 1011, tier="free", daily_used=0)
+async def test_free_flow_uses_token_balance(db, catalog):
+    user = await _make_user(db, 1011, tier="free", token_balance=1000)
     await db.commit()
 
     assert await user_svc.can_generate(db, user) is True
-    await user_svc.consume_quota(db, user)
-    assert await user_svc.can_generate(db, user) is True
-    await user_svc.consume_quota(db, user)
+    await user_svc.deduct_tokens(db, user, 200)
+    assert user.token_balance == 760
+    await user_svc.deduct_tokens(db, user, 800)
     assert await user_svc.can_generate(db, user) is False
 
 
@@ -265,12 +287,12 @@ async def test_has_edit_balance(db, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_edit_deducts_exact_actual_usage(db, catalog, monkeypatch):
+async def test_edit_deduct_applies_profit(db, catalog, monkeypatch):
     from bot.config import settings
     monkeypatch.setattr(settings, "IMAGE_EDIT_COST_TOKENS", 4000)
     user = await _make_user(db, 2005, tier="bronze", token_balance=10000)
     await db.commit()
 
-    # edit reported 700 actual tokens -> exactly 700 deducted
+    # edit reported 700 actual tokens -> 840 charged at 20% profit
     remaining = await user_svc.deduct_tokens(db, user, 700)
-    assert remaining == 9300
+    assert remaining == 9160
