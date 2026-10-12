@@ -58,7 +58,8 @@ async def refresh_fx_rate(force: bool = False) -> float | None:
         if not force and cached_rate() is not None:
             return _cache["rate"]
         try:
-            async with httpx.AsyncClient(timeout=httpx.Timeout(15.0)) as client:
+            # Generous timeout: this route can take 20s+ on slow networks.
+            async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
                 resp = await client.get(FX_URL)
                 resp.raise_for_status()
                 data = resp.json()
