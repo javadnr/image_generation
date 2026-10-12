@@ -60,6 +60,10 @@ async def activate_plan(session: AsyncSession, user: User, plan: str) -> None:
     user.premium_expire_date = datetime.now() + timedelta(days=settings.PREMIUM_DURATION_DAYS)
     user.token_balance = _plan_tokens(plan)
     await session.commit()
+    logger.info(
+        "Plan activated: user=%d plan=%s balance=%d",
+        user.telegram_id, plan, user.token_balance,
+    )
 
 
 async def deactivate_plan(session: AsyncSession, user: User) -> None:
@@ -67,6 +71,10 @@ async def deactivate_plan(session: AsyncSession, user: User) -> None:
     user.premium_expire_date = None
     user.token_balance = settings.FREE_USAGE_TOKEN
     await session.commit()
+    logger.info(
+        "Plan deactivated: user=%d balance=%d",
+        user.telegram_id, user.token_balance,
+    )
 
 
 async def create_zarinpal_purchase(session: AsyncSession, user: User, plan: str) -> dict:

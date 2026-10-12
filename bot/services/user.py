@@ -73,6 +73,10 @@ async def set_tier(session: AsyncSession, telegram_id: int, tier: str) -> User |
         )
         await session.commit()
         await session.refresh(user)
+        logger.info(
+            "Tier set by admin: user=%d tier=%s balance=%d",
+            telegram_id, tier, user.token_balance,
+        )
     return user
 
 

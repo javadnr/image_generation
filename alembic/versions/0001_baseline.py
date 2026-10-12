@@ -144,9 +144,22 @@ def upgrade() -> None:
     )
 
     # ---- one-time data backfills (run exactly once per database) ----
-    op.execute("UPDATE users SET token_balance = 10000 WHERE tier = 'bronze'")
-    op.execute("UPDATE users SET token_balance = 25000 WHERE tier = 'silver'")
-    op.execute("UPDATE users SET token_balance = 60000 WHERE tier = 'gold'")
+    # Allowance UPDATEs only touch NULL/zero balances on purpose: if this
+    # revision ever runs on a database that already has live balances
+    # (e.g. first Alembic boot on an old production DB), existing positive
+    # balances must be preserved, never reset to full.
+    op.execute(
+        "UPDATE users SET token_balance = 10000 "
+        "WHERE tier = 'bronze' AND (token_balance IS NULL OR token_balance = 0)"
+    )
+    op.execute(
+        "UPDATE users SET token_balance = 25000 "
+        "WHERE tier = 'silver' AND (token_balance IS NULL OR token_balance = 0)"
+    )
+    op.execute(
+        "UPDATE users SET token_balance = 60000 "
+        "WHERE tier = 'gold' AND (token_balance IS NULL OR token_balance = 0)"
+    )
     op.execute(
         "UPDATE users SET token_balance = 1000 "
         "WHERE tier = 'free' AND (token_balance IS NULL OR token_balance = 0)"
