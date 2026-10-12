@@ -30,6 +30,7 @@ async def balance(message: Message, session):
     text = texts.QUOTA_REMAINING_TOKENS.format(
         tier=tier_name,
         model=model,
+        balance=f"{balance_credits:,}",
         breakdown="\n".join(lines),
     )
 

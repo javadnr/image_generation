@@ -12,7 +12,7 @@ from bot.handlers.premium import answer_quota_exceeded
 from bot.services.queue import acquire_queue, release_queue
 from bot.services.image import edit_image
 from bot.services.report import send_error_report, send_processed_report
-from bot.services.models import default_model, credit_usage
+from bot.services.models import charge_for
 from bot.keyboards.inline import premium_menu
 from bot.texts import badge
 import bot.texts as texts
@@ -63,18 +63,16 @@ async def handle_photo_edit(message: Message, session, bot):
             os.unlink(tmp.name)
         await gen_msg.delete()
 
-        # Exact actual API usage; deducted only after a successful edit.
-        balance_before = user.token_balance or 0
+        # Exact actual API usage plus profit; deducted only after a successful edit.
         await deduct_tokens(session, user, tokens)
         await log_event(session, user, IMAGE_GENERATION_SUCCESS, {"tier": user.tier})
 
-        model_id = user.image_model or default_model()
-        used, remaining_imgs = credit_usage(balance_before, tokens, model_id)
-        if used is not None:
+        if tokens is not None:
+            charged = charge_for(tokens)
             caption = (
                 f"✅ {(prompt or '')[:60]}\n"
-                f"💳 مصرف: {used} اعتبار | "
-                f"باقی‌مانده: {remaining_imgs} تصویر"
+                f"💳 مصرف: {charged:,} اعتبار | "
+                f"باقی‌مانده: {user.token_balance:,} اعتبار"
             )
         else:
             caption = f"✅ {prompt[:100]}"

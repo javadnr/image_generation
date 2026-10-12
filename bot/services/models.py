@@ -139,23 +139,6 @@ def images_per_quality(balance: int, model_id: str | None) -> dict:
     return out
 
 
-def credit_usage(
-    balance_before: int, actual_tokens: int | None, model_id: str | None
-) -> tuple[int | None, int | None]:
-    """(used_credits, remaining_images) for result captions.
-
-    Both derived from the pre-deduction balance and actual API usage,
-    so captions predict exactly what deduct_tokens will produce.
-    """
-    low_effective = effective_estimate(model_id or default_model(), "low")
-    if low_effective is None or actual_tokens is None:
-        return None, None
-    charged = charge_for(actual_tokens)
-    used = -(-charged // low_effective)
-    remaining = max(0, (balance_before or 0) - charged) // low_effective
-    return used, remaining
-
-
 def plan_allowance(plan: str) -> int:
     """Token allowance granted by a plan (BRONZE/SILVER/GOLD_MAX_TOKEN)."""
     return {

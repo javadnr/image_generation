@@ -176,17 +176,6 @@ def test_model_help_text(catalog):
     assert "token" not in texts.MODEL_HELP.lower()
 
 
-def test_credit_usage_math(catalog):
-    from bot.services.models import credit_usage
-
-    # 20% profit, flare low effective 240: 700 actual -> 840 charged -> 4 used
-    assert credit_usage(10000, 700, "gpt-image-2.5-flare") == (4, 38)
-    assert credit_usage(10000, 200, "gpt-image-2.5-flare") == (1, 40)
-    assert credit_usage(200, 2950, "gpt-image-2.5-flare") == (15, 0)
-    assert credit_usage(10000, None, "gpt-image-2.5-flare") == (None, None)
-    assert credit_usage(10000, 700, "unknown-model") == (None, None)
-
-
 def test_images_per_quality_math(catalog):
     from bot.services.models import images_per_quality
 
@@ -207,8 +196,10 @@ def test_balance_template_renders_breakdown():
     rendered = texts.QUOTA_REMAINING_TOKENS.format(
         tier="برنزی",
         model="gpt-image-2.5-flare",
+        balance="20,000",
         breakdown="• پایین: 100 تصویر\n• متوسط: 45 تصویر",
     )
+    assert "20,000" in rendered
     assert "100 تصویر" in rendered
     assert "توکن" not in rendered
     assert "token" not in rendered.lower()

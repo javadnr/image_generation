@@ -11,7 +11,7 @@ from bot.services.analytics import (
 from bot.handlers.premium import answer_quota_exceeded
 from bot.services.queue import acquire_queue, release_queue
 from bot.services.image import generate_image, TIER_MODELS
-from bot.services.models import default_model, credit_usage, images_per_quality
+from bot.services.models import default_model, charge_for, images_per_quality
 from bot.services.report import send_error_report, send_processed_report
 from bot.keyboards.reply import main_menu
 from bot.keyboards.inline import plans_button
@@ -87,12 +87,13 @@ async def handle_generate(message: Message, session):
 
         model_id = user.image_model or default_model()
         quality = user.image_quality or "low"
-        used, remaining_imgs = credit_usage(user.token_balance or 0, tokens, model_id)
         credit_line = None
-        if used is not None:
+        if tokens is not None:
+            charged = charge_for(tokens)
+            remaining = max(0, (user.token_balance or 0) - charged)
             credit_line = (
-                f"💳 مصرف: {used} اعتبار | "
-                f"باقی‌مانده: {remaining_imgs} تصویر"
+                f"💳 مصرف: {charged:,} اعتبار | "
+                f"باقی‌مانده: {remaining:,} اعتبار"
             )
         if credit_line:
             caption = f"✅ {(message.text or '')[:60]}\n{credit_line}"

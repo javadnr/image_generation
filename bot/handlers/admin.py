@@ -204,6 +204,7 @@ async def activate_cmd(message: Message, session):
             user_id,
             badge(
                 f"✅ اشتراک {texts.TIER_NAMES_FA[tier]} برای شما فعال شد!\n\n"
+                f"💰 اعتبار: {user.token_balance:,}\n"
                 f"🖼 تعداد تقریبی تصاویر:\n{breakdown}\n"
                 f"📅 پایان اشتراک: {expire}"
             ),

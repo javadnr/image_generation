@@ -2,6 +2,7 @@ import logging
 from aiogram import Router, F
 from aiogram.types import Message, PreCheckoutQuery
 from bot.services.payment import complete_bale_payment
+from bot.services.models import plan_allowance
 from bot.services.user import get_or_create_user
 from bot.services.report import send_premium_report
 from bot.keyboards.reply import main_menu
@@ -77,6 +78,7 @@ async def handle_successful_payment(message: Message, **kwargs) -> None:
 
         text = (
             f"✅ اشتراک {texts.TIER_NAMES_FA[plan]} فعال شد!\n\n"
+            f"💰 اعتبار: {plan_allowance(plan):,}\n"
             f"📅 پایان اشتراک: {expire}"
         )
         await message.answer(badge(text), reply_markup=main_menu(user))

@@ -88,6 +88,7 @@ def premium_text(user) -> str:
         return badge(
             f"{texts.PREMIUM_TITLE}\n\n"
             f"🤖 مدل: {model}\n"
+            f"💰 اعتبار باقی‌مانده: {user.token_balance:,}\n"
             f"🖼 تعداد تقریبی تصاویر باقی‌مانده:\n{breakdown}\n"
             f"📅 تاریخ پایان: {expire}\n"
             f"⏳ روزهای باقی‌مانده: {remaining}"
@@ -214,6 +215,7 @@ async def handle_check_payment(callback: CallbackQuery, session):
 
         text = (
             f"✅ اشتراک {texts.TIER_NAMES_FA[plan]} فعال شد!\n\n"
+            f"💰 اعتبار: {plan_allowance(plan):,}\n"
             f"📅 پایان اشتراک: {expire}"
         )
         await callback.message.edit_text(badge(text))
