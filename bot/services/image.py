@@ -52,15 +52,22 @@ async def generate_image(prompt: str, tier: str, width: int = 1024, height: int 
     return await _extract_image_bytes(img), tokens
 
 
-async def edit_image(file_path: str, prompt: str, model: str | None = None) -> tuple[bytes, int | None]:
+async def edit_image(
+    file_path: str,
+    prompt: str,
+    model: str | None = None,
+    size: str | None = None,
+) -> tuple[bytes, int | None]:
+    # NOTE: `quality` is intentionally NOT passed: the pinned SDK rejects it
+    # on edit() (proven TypeError in production logs), so sending it would
+    # break every edit. Size is a supported edit parameter.
     model = model or default_model()
-    log.info("Editing image: model=%s file=%s prompt=%s", model, file_path, prompt[:80])
+    log.info("Editing image: model=%s size=%s file=%s prompt=%s", model, size, file_path, prompt[:80])
+    edit_kwargs = {"model": model, "prompt": prompt}
+    if size is not None:
+        edit_kwargs["size"] = size
     with open(file_path, "rb") as f:
-        result = await client.images.edit(
-            model=model,
-            image=f,
-            prompt=prompt,
-        )
+        result = await client.images.edit(image=f, **edit_kwargs)
     img = result.data[0]
     tokens = _extract_tokens(result)
     log.info("Image edited: model=%s tokens=%s", model, tokens)

@@ -12,7 +12,7 @@ from bot.handlers.premium import answer_quota_exceeded
 from bot.services.queue import acquire_queue, release_queue
 from bot.services.image import edit_image
 from bot.services.report import send_error_report, send_processed_report
-from bot.services.models import charge_for
+from bot.services.models import charge_for, DEFAULT_IMAGE_SIZE, image_dimensions
 from bot.keyboards.inline import premium_menu, plans_button
 from bot.texts import badge
 import bot.texts as texts
@@ -55,8 +55,15 @@ async def handle_photo_edit(message: Message, session, bot):
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
         await bot.download_file(file.file_path, tmp.name)
 
+        # Stored aspect ratio is sent exactly as configured. An unknown
+        # key raises here -> outer error path (message shown, no charge,
+        # lock released), never a silent substitution.
+        width, height = image_dimensions(user.image_size or DEFAULT_IMAGE_SIZE)
         try:
-            image_bytes, tokens = await edit_image(tmp.name, prompt, user.image_model or None)
+            image_bytes, tokens = await edit_image(
+                tmp.name, prompt, user.image_model or None,
+                size=f"{width}x{height}",
+            )
         finally:
             with open(tmp.name, "rb") as f:
                 original_bytes = f.read()
@@ -141,3 +148,8 @@ async def handle_photo_edit(message: Message, session, bot):
     finally:
         await set_generating(session, user, False)
         release_queue(user.tier, user.telegram_id)
+
+
+@router.message(F.photo, ~F.caption)
+async def handle_photo_no_caption(message: Message, session):
+    await message.answer(badge(texts.EDIT_NEED_CAPTION))

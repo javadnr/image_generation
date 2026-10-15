@@ -1,4 +1,9 @@
 import asyncio
+import base64
+import os
+import tempfile
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio
@@ -19,6 +24,20 @@ def event_loop():
     loop = asyncio.new_event_loop()
     yield loop
     loop.close()
+
+
+@pytest.fixture
+def catalog(monkeypatch):
+    from bot.config import settings
+    monkeypatch.setattr(settings, "MODELS", {
+        "gpt-image-2.5-flare": {
+            "label": "gpt-image-2.5-flare",
+            "free": True,
+            "per_million_cost": 30,
+            "cost": {"low": {"cost": 0.006, "tokens": 200}},
+        },
+    })
+    yield
 
 
 @pytest_asyncio.fixture
@@ -145,3 +164,57 @@ def test_quality_keyboard_back_defaults_off():
 def test_settings_hub_keyboard():
     kb = settings_hub_keyboard()
     assert _callbacks(kb) == ["settings_quality", "settings_size"]
+
+
+@pytest.mark.asyncio
+async def test_edit_passes_size_through(catalog):
+    pytest.importorskip("openai")
+    from bot.services import image as image_svc
+
+    raw = base64.b64encode(b"fakepng").decode()
+    fake_result = SimpleNamespace(
+        data=[SimpleNamespace(b64_json=raw, url=None)],
+        usage={"total_tokens": 7},
+    )
+    with patch.object(image_svc, "client") as mock_client:
+        mock_client.images.edit = AsyncMock(return_value=fake_result)
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            tmp.write(b"fakeinput")
+            tmp_path = tmp.name
+        try:
+            await image_svc.edit_image(
+                tmp_path, "make it sunny",
+                model="gpt-image-2.5-flare", size="768x1024",
+            )
+        finally:
+            os.unlink(tmp_path)
+
+    _, kwargs = mock_client.images.edit.call_args
+    assert kwargs["size"] == "768x1024"
+    assert kwargs["model"] == "gpt-image-2.5-flare"
+    assert "quality" not in kwargs
+
+
+@pytest.mark.asyncio
+async def test_edit_omits_size_when_none(catalog):
+    pytest.importorskip("openai")
+    from bot.services import image as image_svc
+
+    raw = base64.b64encode(b"fakepng").decode()
+    fake_result = SimpleNamespace(
+        data=[SimpleNamespace(b64_json=raw, url=None)],
+        usage={"total_tokens": 7},
+    )
+    with patch.object(image_svc, "client") as mock_client:
+        mock_client.images.edit = AsyncMock(return_value=fake_result)
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            tmp.write(b"fakeinput")
+            tmp_path = tmp.name
+        try:
+            await image_svc.edit_image(tmp_path, "make it sunny")
+        finally:
+            os.unlink(tmp_path)
+
+    _, kwargs = mock_client.images.edit.call_args
+    assert "size" not in kwargs
+    assert "quality" not in kwargs
