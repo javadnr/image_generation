@@ -166,6 +166,36 @@ def test_quality_estimates_text(catalog):
     assert "0 تصویر" in zero_text
 
 
+def test_settings_summary_text(catalog):
+    from types import SimpleNamespace
+    from bot.handlers import quality as quality_h
+
+    user = SimpleNamespace(
+        token_balance=20000,
+        image_model="gpt-image-2.5-flare",
+        image_quality="medium",
+        image_size="portrait",
+        tier="bronze",
+    )
+    text = quality_h._settings_summary_text(user)
+    assert "متوسط" in text
+    assert "Portrait (3:4)" in text
+    assert "83" in text and "37" in text and "9" in text
+
+
+def test_settings_summary_text_defaults(catalog):
+    from types import SimpleNamespace
+    from bot.handlers import quality as quality_h
+
+    user = SimpleNamespace(
+        token_balance=0, image_model=None, image_quality=None,
+        image_size=None, tier="free",
+    )
+    text = quality_h._settings_summary_text(user)
+    assert "پایین" in text
+    assert "Square (1:1)" in text
+
+
 def test_model_help_text(catalog):
     import bot.texts as texts
 

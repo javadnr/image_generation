@@ -55,18 +55,31 @@ async def send_confirm(target: Message, prompt: str):
     )
 
 
+def _settings_summary_text(user) -> str:
+    """Full overview: current quality, size, and per-quality estimates."""
+    quality = _current_quality(user)
+    return (
+        f"{texts.SETTINGS_TITLE}\n\n"
+        f"🎨 کیفیت انتخابی: {texts.QUALITY_LABELS.get(quality, quality)}\n"
+        f"📐 اندازه انتخابی: {size_label(_current_size(user))}"
+        f"{_estimates_text(user)}"
+    )
+
+
 @router.message(F.text == texts.MAIN_MENU_QUALITY)
 async def quality_menu(message: Message, session):
+    user = await get_or_create_user(session, message.from_user.id)
     await message.answer(
-        badge(texts.SETTINGS_TITLE),
+        badge(_settings_summary_text(user)),
         reply_markup=settings_hub_keyboard(),
     )
 
 
 @router.callback_query(F.data == "settings_home")
 async def settings_home(callback: CallbackQuery, session):
+    user = await get_or_create_user(session, callback.from_user.id)
     await callback.message.edit_text(
-        badge(texts.SETTINGS_TITLE),
+        badge(_settings_summary_text(user)),
         reply_markup=settings_hub_keyboard(),
     )
     await callback.answer()
