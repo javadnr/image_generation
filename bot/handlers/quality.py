@@ -1,8 +1,11 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
-from bot.services.user import get_or_create_user, set_quality, VALID_QUALITIES
-from bot.services.models import default_model, images_per_quality
-from bot.keyboards.inline import quality_keyboard
+from bot.services.user import get_or_create_user, set_quality, set_size, VALID_QUALITIES
+from bot.services.models import (
+    default_model, images_per_quality, VALID_IMAGE_SIZES,
+    size_label, DEFAULT_IMAGE_SIZE,
+)
+from bot.keyboards.inline import quality_keyboard, size_keyboard, settings_hub_keyboard, confirm_keyboard
 from bot.texts import badge
 import bot.texts as texts
 
@@ -11,6 +14,10 @@ router = Router()
 
 def _current_quality(user) -> str:
     return user.image_quality or "low"
+
+
+def _current_size(user) -> str:
+    return user.image_size or DEFAULT_IMAGE_SIZE
 
 
 def _estimates_text(user) -> str:
@@ -26,13 +33,63 @@ def _estimates_text(user) -> str:
     return f"\n\n📊 با موجودی فعلی تقریباً می‌تونی بسازی:\n{lines}"
 
 
+def _quality_menu_text(user) -> str:
+    return (
+        f"{texts.QUALITY_TITLE}{_estimates_text(user)}\n\n"
+        f"کیفیت فعلی: {texts.QUALITY_LABELS.get(_current_quality(user), _current_quality(user))}"
+    )
+
+
+def _size_menu_text(user) -> str:
+    return (
+        f"{texts.SIZE_TITLE}\n\n"
+        f"اندازه فعلی: {size_label(_current_size(user))}"
+    )
+
+
+async def send_confirm(target: Message, prompt: str):
+    """Send the generate-confirmation message for the latest pending prompt."""
+    await target.answer(
+        badge(f"{texts.CONFIRM_ASK}\n\n«{prompt[:texts.CONFIRM_PROMPT_MAX]}»"),
+        reply_markup=confirm_keyboard(),
+    )
+
+
 @router.message(F.text == texts.MAIN_MENU_QUALITY)
 async def quality_menu(message: Message, session):
-    user = await get_or_create_user(session, message.from_user.id)
     await message.answer(
-        badge(f"{texts.QUALITY_TITLE}{_estimates_text(user)}"),
-        reply_markup=quality_keyboard(user.tier, _current_quality(user)),
+        badge(texts.SETTINGS_TITLE),
+        reply_markup=settings_hub_keyboard(),
     )
+
+
+@router.callback_query(F.data == "settings_home")
+async def settings_home(callback: CallbackQuery, session):
+    await callback.message.edit_text(
+        badge(texts.SETTINGS_TITLE),
+        reply_markup=settings_hub_keyboard(),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "settings_quality")
+async def settings_quality(callback: CallbackQuery, session):
+    user = await get_or_create_user(session, callback.from_user.id)
+    await callback.message.edit_text(
+        badge(_quality_menu_text(user)),
+        reply_markup=quality_keyboard(user.tier, _current_quality(user), show_back=True),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "settings_size")
+async def settings_size(callback: CallbackQuery, session):
+    user = await get_or_create_user(session, callback.from_user.id)
+    await callback.message.edit_text(
+        badge(_size_menu_text(user)),
+        reply_markup=size_keyboard(_current_size(user), show_back=True),
+    )
+    await callback.answer()
 
 
 @router.callback_query(F.data.startswith("quality:"))
@@ -50,11 +107,35 @@ async def quality_set(callback: CallbackQuery, session):
     await set_quality(session, user, value)
     try:
         await callback.message.edit_text(
-            badge(f"{texts.QUALITY_TITLE}{_estimates_text(user)}"),
-            reply_markup=quality_keyboard(user.tier, value),
+            badge(_quality_menu_text(user)),
+            reply_markup=quality_keyboard(user.tier, value, show_back=True),
         )
     except Exception:
         pass
     await callback.answer(
         texts.QUALITY_SET.format(label=texts.QUALITY_LABELS[value])
     )
+
+
+@router.callback_query(F.data.startswith("size:"))
+async def size_set(callback: CallbackQuery, session):
+    value = callback.data.split(":", 1)[1]
+    if value not in VALID_IMAGE_SIZES:
+        await callback.answer("⚠️ گزینه نامعتبر.", show_alert=True)
+        return
+
+    user = await get_or_create_user(session, callback.from_user.id)
+    await set_size(session, user, value)
+    try:
+        await callback.message.edit_text(
+            badge(_size_menu_text(user)),
+            reply_markup=size_keyboard(value, show_back=True),
+        )
+    except Exception:
+        pass
+    await callback.answer(
+        texts.SIZE_SET.format(label=size_label(value))
+    )
+
+    if user.pending_prompt and not user.is_generating:
+        await send_confirm(callback.message, user.pending_prompt)

@@ -175,6 +175,6 @@ def test_revision_chain_valid():
     cfg = Config("alembic.ini")
     cfg.set_main_option("script_location", "alembic")
     script = ScriptDirectory.from_config(cfg)
-    assert script.get_heads() == ["0003_pending_prompt"]
-    rev = script.get_revision("0003_pending_prompt")
-    assert rev.down_revision == "0002_discounts"
+    assert script.get_heads() == ["0004_image_size"]
+    rev = script.get_revision("0004_image_size")
+    assert rev.down_revision == "0003_pending_prompt"

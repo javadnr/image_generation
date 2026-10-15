@@ -13,10 +13,36 @@ Schema per model id:
 
 FALLBACK_MODELS keeps the bot working when MODELS is not configured.
 
-Profit (PROFIT_PERCENTAGE) is applied exactly once, at charge/display
-time, on top of raw estimates or actual API usage. All helpers below
-round float artifacts away before ceil/floor so boundary values are exact.
+IMAGE_SIZES maps aspect-ratio keys to API pixel dimensions. Sizes are
+sent to the image API exactly as configured here — if a model rejects a
+ratio, the failure surfaces through the normal error path instead of
+silently substituting a different size.
 """
+IMAGE_SIZES = {
+    "square": {"label": "Square (1:1)", "width": 1024, "height": 1024},
+    "portrait": {"label": "Portrait (3:4)", "width": 768, "height": 1024},
+    "story": {"label": "Story (9:16)", "width": 576, "height": 1024},
+    "landscape": {"label": "Landscape (4:3)", "width": 1024, "height": 768},
+    "widescreen": {"label": "Widescreen (16:9)", "width": 1024, "height": 576},
+}
+DEFAULT_IMAGE_SIZE = "square"
+VALID_IMAGE_SIZES = tuple(IMAGE_SIZES)
+
+
+def size_label(key: str | None) -> str:
+    return IMAGE_SIZES.get(key or "", {}).get("label") or key or DEFAULT_IMAGE_SIZE
+
+
+def image_dimensions(key: str | None) -> tuple:
+    """Pixel (width, height) for an aspect key. Raises on unknown keys
+    so unsupported ratios fail explicitly instead of silently changing."""
+    try:
+        entry = IMAGE_SIZES[key or ""]
+    except KeyError:
+        raise ValueError(f"Unsupported image size: {key!r}")
+    return entry["width"], entry["height"]
+
+
 import math
 
 from bot.config import settings

@@ -158,6 +158,14 @@ async def set_quality(session: AsyncSession, user: User, quality: str) -> None:
     await session.commit()
 
 
+async def set_size(session: AsyncSession, user: User, size: str) -> None:
+    from bot.services.models import VALID_IMAGE_SIZES
+    if size not in VALID_IMAGE_SIZES:
+        raise ValueError(f"Invalid image size: {size}")
+    user.image_size = size
+    await session.commit()
+
+
 async def set_model(session: AsyncSession, user: User, model: str) -> None:
     from bot.services.models import model_ids
     if model not in model_ids():

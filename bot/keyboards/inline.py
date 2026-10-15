@@ -54,7 +54,7 @@ def plans_button() -> InlineKeyboardMarkup:
 QUALITY_OPTIONS = (("low", "پایین"), ("medium", "متوسط"), ("high", "بالا"))
 
 
-def quality_keyboard(tier: str, current: str) -> InlineKeyboardMarkup:
+def quality_keyboard(tier: str, current: str, show_back: bool = False) -> InlineKeyboardMarkup:
     buttons = []
     for value, label in QUALITY_OPTIONS:
         if tier == "free" and value != "low":
@@ -63,6 +63,27 @@ def quality_keyboard(tier: str, current: str) -> InlineKeyboardMarkup:
             tick = "✅ " if value == current else ""
             text = f"{tick}{label}"
         buttons.append([InlineKeyboardButton(text=text, callback_data=f"quality:{value}")])
+    if show_back:
+        buttons.append([InlineKeyboardButton(text=texts.SETTINGS_BACK, callback_data="settings_home")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def settings_hub_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=texts.SETTINGS_QUALITY_BTN, callback_data="settings_quality")],
+        [InlineKeyboardButton(text=texts.SETTINGS_SIZE_BTN, callback_data="settings_size")],
+    ])
+
+
+def size_keyboard(current: str, show_back: bool) -> InlineKeyboardMarkup:
+    from bot.services.models import IMAGE_SIZES
+    buttons = []
+    for value in IMAGE_SIZES:
+        label = IMAGE_SIZES[value]["label"]
+        tick = "✅ " if value == current else ""
+        buttons.append([InlineKeyboardButton(text=f"{tick}{label}", callback_data=f"size:{value}")])
+    if show_back:
+        buttons.append([InlineKeyboardButton(text=texts.SETTINGS_BACK, callback_data="settings_home")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 

@@ -30,6 +30,14 @@ QUALITY_LABELS = {"low": "پایین", "medium": "متوسط", "high": "بالا
 QUALITY_SET = "✅ کیفیت تصویر روی {label} تنظیم شد."
 QUALITY_LOCKED = "🔒 این کیفیت مخصوص کاربران پریمیوم است."
 
+# Image settings
+SETTINGS_TITLE = "⚙️ تنظیمات تصویر"
+SETTINGS_QUALITY_BTN = "⚙️ کیفیت تصویر"
+SETTINGS_SIZE_BTN = "📐 اندازه تصویر"
+SETTINGS_BACK = "⬅️ بازگشت"
+SIZE_TITLE = "📐 اندازه تصویر خروجی رو انتخاب کن:"
+SIZE_SET = "✅ اندازه تصویر روی {label} تنظیم شد."
+
 # Model
 MODEL_TITLE = "مدل تولید تصویر رو انتخاب کن:"
 MODEL_HELP = (
@@ -48,6 +56,7 @@ CONFIRM_PROGRESS = "⏳ در حال ساخت تصویر با پرامپت شما
 CONFIRM_EMPTY = "⚠️ پرامپت فعالی وجود ندارد. لطفاً یک پرامپت جدید بفرستید."
 CONFIRM_BUSY = "⏳ لطفاً صبر کنید. تصویر قبلی در حال ساخت است."
 CONFIRM_PROMPT_MAX = 300
+GENERATE_SETTINGS_NOTE = "💡 کیفیت و اندازه رو می‌تونی از دکمه «{button}» در منوی اصلی عوض کنی."
 
 # Premium
 PREMIUM_TITLE = "💎 اشتراک پریمیوم"

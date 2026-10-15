@@ -14,10 +14,13 @@ from bot.services.analytics import (
 from bot.handlers.premium import answer_quota_exceeded
 from bot.services.queue import acquire_queue, release_queue
 from bot.services.image import generate_image
-from bot.services.models import default_model, charge_for, images_per_quality
+from bot.services.models import (
+    default_model, charge_for, images_per_quality,
+    DEFAULT_IMAGE_SIZE, image_dimensions, size_label,
+)
 from bot.services.report import send_error_report, send_processed_report
 from bot.keyboards.reply import main_menu
-from bot.keyboards.inline import plans_button, confirm_keyboard
+from bot.keyboards.inline import plans_button, confirm_keyboard, size_keyboard
 from bot.texts import badge
 import bot.texts as texts
 
@@ -65,8 +68,8 @@ async def handle_generate(message: Message, session):
 
     await set_pending_prompt(session, user, message.text)
     await message.answer(
-        badge(f"{texts.CONFIRM_ASK}\n\n«{message.text[:texts.CONFIRM_PROMPT_MAX]}»"),
-        reply_markup=confirm_keyboard(),
+        badge(texts.SIZE_TITLE),
+        reply_markup=size_keyboard(user.image_size or DEFAULT_IMAGE_SIZE, show_back=False),
     )
 
 
@@ -102,9 +105,17 @@ async def confirm_yes(callback: CallbackQuery, session):
 
     await callback.answer()
     await session.refresh(user)
+    quality = user.image_quality or "low"
+    size_key = user.image_size or DEFAULT_IMAGE_SIZE
     try:
         await callback.message.edit_text(
-            badge(f"{texts.CONFIRM_PROGRESS}\n«{prompt[:texts.CONFIRM_PROMPT_MAX]}»")
+            badge(
+                f"{texts.CONFIRM_PROGRESS}\n"
+                f"📝 پرامپت: «{prompt[:texts.CONFIRM_PROMPT_MAX]}»\n"
+                f"🎨 کیفیت: {texts.QUALITY_LABELS.get(quality, quality)}\n"
+                f"📐 اندازه: {size_label(size_key)}\n"
+                f"{texts.GENERATE_SETTINGS_NOTE.format(button=texts.MAIN_MENU_QUALITY)}"
+            )
         )
     except Exception:
         pass
@@ -125,10 +136,9 @@ async def confirm_yes(callback: CallbackQuery, session):
 
 
 async def _run_generation(message, session, user, prompt_text, tg_user, bot, gen_msg):
-    width = user.image_width if user.tier != "free" else 1024
-    height = user.image_height if user.tier != "free" else 1024
-
+    width, height = 1024, 1024
     try:
+        width, height = image_dimensions(user.image_size or DEFAULT_IMAGE_SIZE)
         logging.info("User %d tier=%s generating %dx%d", user.telegram_id, user.tier, width, height)
 
         image_bytes, tokens = await generate_image(
