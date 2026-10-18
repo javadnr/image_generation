@@ -7,7 +7,7 @@ from bot.config import settings
 from bot.services.user import (
     get_all_users_count, get_active_today_count, get_joined_today_count,
     get_tier_users_count, get_tier_images_today, reset_all_daily, set_tier,
-    get_source_counts_today, SOURCE_LABELS,
+    get_source_stats,
 )
 from bot.services import analytics as az
 from bot.services.models import images_per_quality, default_model, PLANS
@@ -23,6 +23,24 @@ import bot.texts as texts
 logger = logging.getLogger(__name__)
 
 router = Router()
+
+# Bot Status is one Telegram message (4096-char limit); cap the acquisition
+# list so a large number of sources can never break it.
+MAX_SOURCE_LINES = 30
+
+
+def _sources_block(stats: list) -> str:
+    """Render one 'source — کل: N | امروز: M' line per distinct source."""
+    if not stats:
+        return "  —"
+    lines = [
+        f"  {source or texts.SOURCE_UNKNOWN} — کل: {total} | امروز: {today}"
+        for source, total, today in stats[:MAX_SOURCE_LINES]
+    ]
+    hidden = len(stats) - MAX_SOURCE_LINES
+    if hidden > 0:
+        lines.append(f"  … و {hidden} منبع دیگر")
+    return "\n".join(lines)
 
 
 @router.message(F.text == texts.MAIN_MENU_ADMIN)
@@ -57,9 +75,7 @@ async def bot_status(message: Message, session):
     pricing_new = await az.get_new_pricing_viewers_today(session)
     plan_sel = await az.get_plan_selection_today(session)
     pay_started, pay_success = await az.get_payments_today(session)
-    src = await get_source_counts_today(session)
-    known = set(SOURCE_LABELS)
-    src_other = sum(n for s, n in src.items() if s and s not in known)
+    source_stats = await get_source_stats(session)
 
     status_text = "فعال" if bot_enabled else "غیرفعال"
 
@@ -69,12 +85,7 @@ async def bot_status(message: Message, session):
             total_users=total_users,
             active_today=active_today,
             joined_today=joined_today,
-            src_instagram=src.get("instagram", 0),
-            src_youtube=src.get("youtube", 0),
-            src_telegram=src.get("telegram", 0),
-            src_bale=src.get("bale", 0),
-            src_other=src_other,
-            src_unknown=src.get("", 0),
+            acquisition_sources=_sources_block(source_stats),
             started_today=started_today,
             success_today=success_today,
             failed_today=failed_today,

@@ -16,6 +16,9 @@ MAIN_MENU_ADMIN = "📊 وضعیت ربات"
 
 TIER_NAMES_FA = {"bronze": "برنزی", "silver": "نقره‌ای", "gold": "طلایی", "diamond": "الماسی"}
 
+# Shown for users who started the bot without a deep-link parameter.
+SOURCE_UNKNOWN = "نامشخص (مستقیم)"
+
 # Plan emoji and marketing tags (UI only; ordering comes from models.PLANS).
 PLAN_EMOJI = {"bronze": "🥉", "silver": "🥈", "gold": "🥇", "diamond": "💎"}
 PLAN_TAGS = {"bronze": "", "silver": "⭐ محبوب‌ترین", "gold": "🔥 بیشترین اعتبار", "diamond": "💠 حرفه‌ای‌ترین"}
@@ -97,10 +100,8 @@ ADMIN_STATS = (
     "  کل: {total_users}\n"
     "  جدید امروز: {joined_today}\n"
     "  فعال امروز: {active_today}\n\n"
-    "📥 ورودی امروز (منبع تبلیغ):\n"
-    "  اینستاگرام: {src_instagram} | یوتیوب: {src_youtube}\n"
-    "  تلگرام: {src_telegram} | بله: {src_bale}\n"
-    "  سایر: {src_other} | نامشخص: {src_unknown}\n\n"
+    "📥 منابع جذب (کل | امروز):\n"
+    "{acquisition_sources}\n\n"
     "🖼 مصرف امروز:\n"
     "  شروع: {started_today} | موفق: {success_today} | خطا: {failed_today}\n\n"
     "💎 خرید امروز:\n"

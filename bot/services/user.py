@@ -1,7 +1,7 @@
 import logging
 import re
 
-from sqlalchemy import select, update, func
+from sqlalchemy import select, update, func, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from bot.db.models import User, UserEvent
 from bot.config import settings
@@ -27,40 +27,64 @@ def free_generation_enabled() -> bool:
     return bool(settings.ALLOW_FREE)
 
 
-# Ad-platform attribution. First-touch wins; the deep-link payload is
-# sanitized to a short token so arbitrary junk never lands in the DB.
-SOURCE_MAX_LEN = 20
-_SOURCE_RE = re.compile(r"^[a-z0-9_-]{1,%d}$" % SOURCE_MAX_LEN)
-# Friendly labels for the admin panel; unknown tokens fall back to raw text.
-SOURCE_LABELS = {
-    "instagram": "اینستاگرام",
-    "youtube": "یوتیوب",
-    "telegram": "تلگرام",
-    "bale": "بله",
-}
+# Acquisition-source attribution. Fully dynamic: any valid Telegram start
+# payload is stored verbatim (case preserved) — no predefined list, no enum.
+# Telegram allows [A-Za-z0-9_-] up to 64 chars in a deep-link payload.
+SOURCE_MAX_LEN = 64
+_SOURCE_RE = re.compile(r"[A-Za-z0-9_-]{1,%d}" % SOURCE_MAX_LEN)
+
+
+def normalize_source(payload: str | None) -> str | None:
+    """Sanitize a /start payload. Returns the token or None when unusable.
+
+    Case is preserved so `Aparat`, `X`, and `XWY` stay distinct and readable.
+    """
+    token = (payload or "").strip()
+    if not token or not _SOURCE_RE.fullmatch(token):
+        return None
+    return token
 
 
 async def record_source(session: AsyncSession, user: User, payload: str | None) -> None:
-    """Store the ad platform from '/start <payload>' on first touch only."""
-    if user.source or not payload:
+    """Store the acquisition source from '/start <payload>' on first touch only.
+
+    Existing users keep their original source — a later /start with a
+    different parameter never overwrites it.
+    """
+    if user.source:
         return
-    token = payload.strip().lower()[:SOURCE_MAX_LEN]
-    if _SOURCE_RE.match(token):
+    token = normalize_source(payload)
+    if token:
         user.source = token
         await session.commit()
         logger.info("Source recorded: user=%d source=%s", user.telegram_id, token)
 
 
-async def get_source_counts_today(session: AsyncSession) -> dict:
-    """{source-or-'' : new-user count} for today (Tehran day), admins excluded."""
+async def get_source_stats(session: AsyncSession) -> list:
+    """Per-source acquisition stats, aggregated in the database.
+
+    Returns [(source_or_None, all_time_total, today_total), ...] sorted by
+    all-time total desc. Every source that has at least one attributed user
+    is included (even with zero registrations today). NULL source = unknown.
+    """
     start, end = tehran_day_utc_window(today_in_tehran())
+    today_case = case(
+        (
+            (User.created_at >= start) & (User.created_at < end), 1
+        ),
+        else_=0,
+    )
     stmt = (
-        select(User.source, func.count(User.id))
-        .where(User.created_at >= start, User.created_at < end)
+        select(
+            User.source,
+            func.count(User.id).label("total"),
+            func.sum(today_case).label("today"),
+        )
         .group_by(User.source)
+        .order_by(func.count(User.id).desc())
     )
     result = await session.execute(exclude_admins(stmt))
-    return {(src or ""): count for src, count in result.all()}
+    return [(src, total, int(today or 0)) for src, total, today in result.all()]
 
 
 async def can_generate(session: AsyncSession, user: User) -> bool:

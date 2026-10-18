@@ -175,6 +175,6 @@ def test_revision_chain_valid():
     cfg = Config("alembic.ini")
     cfg.set_main_option("script_location", "alembic")
     script = ScriptDirectory.from_config(cfg)
-    assert script.get_heads() == ["0005_user_source"]
-    rev = script.get_revision("0005_user_source")
-    assert rev.down_revision == "0004_image_size"
+    assert script.get_heads() == ["0006_source_widen"]
+    rev = script.get_revision("0006_source_widen")
+    assert rev.down_revision == "0005_user_source"
