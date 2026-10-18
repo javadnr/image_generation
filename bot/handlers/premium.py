@@ -123,12 +123,16 @@ def premium_text(user, discounts: dict | None = None) -> str:
         )
 
     plan_blocks = "\n\n".join(_plan_block(tier, discounts) for tier in PLANS)
+    free_block = (
+        f"🆓 پلن رایگان\n"
+        f"• {settings.FREE_USAGE_TOKEN:,} اعتبار\n\n"
+        if settings.ALLOW_FREE else ""
+    )
     return badge(
         f"💎 پلن‌های پریمیوم\n\n"
         f"با خرید پریمیوم، تصاویر با کیفیت تر بساز! 🚀\n"
         f"📅 همه پلن‌ها ماهانه هستند.\n\n"
-        f"🆓 پلن رایگان\n"
-        f"• {settings.FREE_USAGE_TOKEN:,} اعتبار\n\n"
+        f"{free_block}"
         f"{plan_blocks}\n\n"
         f"📌 توجه: تعداد تصاویر نمایش‌داده‌شده بر اساس کیفیت پایین است. "
         f"تولید تصویر با کیفیت بالاتر، از موجودی شما بیشتر کم می‌کند.\n"
@@ -141,7 +145,9 @@ def premium_text(user, discounts: dict | None = None) -> str:
 async def answer_quota_exceeded(message: Message, session, user, discounts: dict | None = None) -> None:
     """Tell the user they must buy for more, then show the plans."""
     await maybe_log_free_limit(session, user)
-    if user.tier == "free":
+    if user.tier == "free" and not settings.ALLOW_FREE:
+        await message.answer(badge(texts.FREE_DISABLED))
+    elif user.tier == "free":
         await message.answer(badge(texts.LIMIT_REACHED_BUY))
     else:
         await message.answer(badge(texts.INSUFFICIENT_BALANCE))

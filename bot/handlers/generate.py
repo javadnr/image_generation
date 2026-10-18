@@ -39,6 +39,9 @@ MENU_BUTTONS = {
 @router.message(F.text == texts.MAIN_MENU_GENERATE)
 async def generate_prompt(message: Message, session):
     user = await get_or_create_user(session, message.from_user.id)
+    if user.tier == "free" and not settings.ALLOW_FREE:
+        await answer_quota_exceeded(message, session, user)
+        return
     await log_event(session, user, HELP_VIEWED)
     await message.answer(badge(
         "🎨 ساخت تصویر\n\n"

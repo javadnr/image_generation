@@ -15,7 +15,13 @@ TIER_NAMES_FA = {"free": "آزاد", "bronze": "برنزی", "silver": "نقره
 
 @router.message(F.text == texts.MAIN_MENU_BALANCE)
 async def balance(message: Message, session):
+    from bot.config import settings
     user = await get_or_create_user(session, message.from_user.id)
+
+    if user.tier == "free" and not settings.ALLOW_FREE:
+        await message.answer(badge(texts.FREE_DISABLED), reply_markup=plans_button())
+        return
+
     tier_name = TIER_NAMES_FA.get(user.tier, "آزاد")
 
     balance_credits = user.token_balance or 0

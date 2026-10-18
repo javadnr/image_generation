@@ -21,8 +21,17 @@ async def get_or_create_user(session: AsyncSession, telegram_id: int) -> User:
     return user
 
 
+def free_generation_enabled() -> bool:
+    """Whether free-tier users may generate at all (ALLOW_FREE env flag)."""
+    return bool(settings.ALLOW_FREE)
+
+
 async def can_generate(session: AsyncSession, user: User) -> bool:
     """Unified pre-check for every tier.
+
+    Free-tier users are blocked outright when ALLOW_FREE is off, regardless
+    of their remaining free credits — the single backend choke point shared
+    by every generation path.
 
     The minimum is the raw configured estimate for the selected model and
     quality (e.g. 200 for Low) — profit is NOT added here. Actual cost,
@@ -30,6 +39,8 @@ async def can_generate(session: AsyncSession, user: User) -> bool:
     flooring it at zero.
     """
     from bot.services.models import estimate_tokens, default_model
+    if user.tier == "free" and not free_generation_enabled():
+        return False
     required = estimate_tokens(
         user.image_model or default_model(),
         user.image_quality or "low",
