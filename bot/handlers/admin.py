@@ -14,6 +14,7 @@ from bot.services.models import images_per_quality, default_model, PLANS
 from bot.services.payment import activate_plan, deactivate_plan
 from bot.keyboards.inline import admin_status, plans_button
 from bot.keyboards.reply import main_menu
+from bot.utils.timezone import jalali_date
 from bot.db.engine import async_session
 from sqlalchemy import select, update
 from bot.db.models import BotSettings, User
@@ -254,7 +255,7 @@ async def activate_cmd(message: Message, session):
         message.bot, user_id, tier, expire_dt=user.premium_expire_date
     )
 
-    expire = user.premium_expire_date.strftime("%Y/%m/%d") if user.premium_expire_date else "—"
+    expire = jalali_date(user.premium_expire_date)
     model = user.image_model or default_model()
     breakdown = "\n".join(
         f"• {texts.QUALITY_LABELS[q]}: {count:,} تصویر"
@@ -409,7 +410,7 @@ async def off_cmd(message: Message, session):
 
     discounts = await get_active_discounts(session)
     exp = discounts.get(scope, (0, None))[1]
-    until = exp.strftime("%Y/%m/%d") if exp else "—"
+    until = jalali_date(exp)
     scope_name = "همه پلن‌ها" if scope == "all" else f"پلن {texts.TIER_NAMES_FA.get(scope, scope)}"
     await message.answer(badge(texts.ADMIN_OFF_DONE.format(
         percent=percent, scope=scope_name, until=until,
@@ -488,14 +489,8 @@ async def userinfo_cmd(message: Message, session):
     )
     images = img_result.scalar() or 0
 
-    expire = (
-        user.premium_expire_date.strftime("%Y/%m/%d")
-        if user.premium_expire_date else "—"
-    )
-    joined = (
-        user.created_at.strftime("%Y/%m/%d")
-        if user.created_at else "—"
-    )
+    expire = jalali_date(user.premium_expire_date)
+    joined = jalali_date(user.created_at)
     await message.answer(badge(
         "👤 اطلاعات کاربر\n"
         "─────────────────\n"

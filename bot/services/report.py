@@ -1,21 +1,16 @@
 import logging
 from datetime import datetime
 
-import jdatetime
 from aiogram import Bot
 from aiogram.types import BufferedInputFile
 from bot.config import settings
+from bot.utils.timezone import jalali_datetime
 
 logger = logging.getLogger(__name__)
 
 
 def format_jalali(dt: datetime | None) -> str:
-    if not dt:
-        return "—"
-    try:
-        return jdatetime.datetime.fromgregorian(datetime=dt).strftime("%Y/%m/%d ساعت %H:%M")
-    except Exception:
-        return dt.strftime("%Y/%m/%d %H:%M")
+    return jalali_datetime(dt)
 
 
 async def send_premium_report(

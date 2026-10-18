@@ -18,6 +18,7 @@ from bot.services.payment import (
 from bot.services.pricing import plan_price_toman, last_known_rate
 from bot.services.discounts import get_active_discounts, discount_for
 from bot.keyboards.inline import premium_menu
+from bot.utils.timezone import jalali_date
 from bot.keyboards.reply import main_menu
 from bot.db.engine import async_session
 from bot.config import settings
@@ -86,7 +87,7 @@ def _plan_header(emoji: str, tier: str, discounts: dict | None) -> str:
     if pct:
         line += f" 🔥 {pct}٪ تخفیف"
         if exp:
-            line += f" تا {exp.strftime('%Y/%m/%d')}"
+            line += f" تا {jalali_date(exp)}"
     return line
 
 
@@ -105,7 +106,7 @@ def _plan_block(tier: str, discounts: dict | None) -> str:
 
 def premium_text(user, discounts: dict | None = None) -> str:
     if user.tier != "free" and user.premium_expire_date:
-        expire = user.premium_expire_date.strftime("%Y/%m/%d")
+        expire = jalali_date(user.premium_expire_date)
         remaining = (user.premium_expire_date.date() - datetime.now().date()).days
         model = user.image_model or default_model()
         per_quality = images_per_quality(user.token_balance or 0, model)

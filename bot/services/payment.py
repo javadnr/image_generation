@@ -9,6 +9,7 @@ from bot.config import settings
 from bot.services.analytics import log_event, PAYMENT_SUCCESS
 from bot.services.zarinpal import ZarinPalClient
 from bot.services.bale_payment import BalePaymentProvider
+from bot.utils.timezone import jalali_date
 
 logger = logging.getLogger(__name__)
 
@@ -156,7 +157,7 @@ async def verify_zarinpal_payment(session: AsyncSession, tx_id: str) -> dict:
             "success": True,
             "plan": tx.plan,
             "tokens_granted": user.token_balance,
-            "expires_at": user.premium_expire_date.strftime("%Y/%m/%d") if user.premium_expire_date else "—",
+            "expires_at": jalali_date(user.premium_expire_date),
             "expire_dt": user.premium_expire_date,
             "paid_at": tx.paid_at,
             "payment_ref_id": tx.payment_ref_id,
@@ -239,7 +240,7 @@ async def complete_bale_payment(
         "success": True,
         "plan": tx.plan,
         "tokens_granted": user.token_balance,
-        "expires_at": user.premium_expire_date.strftime("%Y/%m/%d") if user.premium_expire_date else "—",
+        "expires_at": jalali_date(user.premium_expire_date),
         "expire_dt": user.premium_expire_date,
         "paid_at": tx.paid_at,
         "payment_ref_id": tx.payment_ref_id,

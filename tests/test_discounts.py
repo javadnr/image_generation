@@ -184,7 +184,8 @@ def test_premium_text_shows_discount(catalog):
     exp = datetime.now() + timedelta(days=1)
     text = premium_h.premium_text(user, {"bronze": (15, exp)})
     assert "15٪ تخفیف" in text
-    assert exp.strftime("%Y/%m/%d") in text
+    from bot.utils.timezone import jalali_date
+    assert jalali_date(exp) in text
 
 
 def test_premium_text_without_discount_has_no_tag(catalog):
