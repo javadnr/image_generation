@@ -165,17 +165,36 @@ async def test_handle_generate_proceeds_when_enabled(db, catalog, monkeypatch, g
 
 
 @pytest.mark.asyncio
-async def test_generate_prompt_button_blocked_when_disabled(db, catalog, monkeypatch, generate_handler):
+async def test_help_button_always_shows_guide(db, catalog, monkeypatch, generate_handler):
     from bot.config import settings
     generate_h = generate_handler
     monkeypatch.setattr(settings, "ALLOW_FREE", False)
 
-    await _make_user(db, 9307, tier="free", token_balance=99999)
+    user = await _make_user(db, 9307, tier="free", token_balance=99999)
     msg = _FakeMessage(9307)
-    await generate_h.generate_prompt(msg, db)
+    await generate_h.help_message(msg, db)
 
     joined = "\n".join(c for c in msg.calls if c)
-    assert "غیرفعال" in joined
+    # The guide is shown even with free generation disabled, and covers
+    # settings + purchase + both photo behaviors.
+    assert "راهنمای استفاده" in joined
+    assert "تنظیمات تصویر" in joined
+    assert "خرید اشتراک" in joined
+    assert "ویرایش عکس اصلی" in joined
+    assert "عکس مرجع" in joined
+    # It must never block on quota nor start a generation.
+    assert "غیرفعال" not in joined
+    await db.refresh(user)
+    assert user.pending_prompt is None
+
+
+def test_main_menu_first_button_is_help():
+    from types import SimpleNamespace as NS
+    from bot.keyboards.reply import main_menu
+    menu = main_menu(NS(telegram_id=1))
+    labels = [b.text for row in menu.keyboard for b in row]
+    assert labels[0] == "📖 راهنما"
+    assert "🎨 ساخت تصویر" not in labels
 
 
 @pytest.mark.asyncio

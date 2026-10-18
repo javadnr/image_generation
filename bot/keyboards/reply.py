@@ -5,7 +5,7 @@ import bot.texts as texts
 
 def main_menu(user) -> ReplyKeyboardMarkup:
     buttons = [
-        [KeyboardButton(text=texts.MAIN_MENU_GENERATE), KeyboardButton(text=texts.MAIN_MENU_BALANCE)],
+        [KeyboardButton(text=texts.MAIN_MENU_HELP), KeyboardButton(text=texts.MAIN_MENU_BALANCE)],
         [KeyboardButton(text=texts.MAIN_MENU_PREMIUM), KeyboardButton(text=texts.MAIN_MENU_QUALITY)],
         [KeyboardButton(text=texts.MAIN_MENU_MODEL)],
     ]

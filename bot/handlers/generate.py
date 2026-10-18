@@ -27,7 +27,7 @@ import bot.texts as texts
 router = Router()
 
 MENU_BUTTONS = {
-    texts.MAIN_MENU_GENERATE,
+    texts.MAIN_MENU_HELP,
     texts.MAIN_MENU_BALANCE,
     texts.MAIN_MENU_PREMIUM,
     texts.MAIN_MENU_QUALITY,
@@ -36,22 +36,12 @@ MENU_BUTTONS = {
 }
 
 
-@router.message(F.text == texts.MAIN_MENU_GENERATE)
-async def generate_prompt(message: Message, session):
+@router.message(F.text == texts.MAIN_MENU_HELP)
+async def help_message(message: Message, session):
+    # Help must never depend on tier/quota and must never start generation.
     user = await get_or_create_user(session, message.from_user.id)
-    if user.tier == "free" and not settings.ALLOW_FREE:
-        await answer_quota_exceeded(message, session, user)
-        return
     await log_event(session, user, HELP_VIEWED)
-    await message.answer(badge(
-        "🎨 ساخت تصویر\n\n"
-        "ایده یا چیزی که می‌خوای ببینی رو به زبان طبیعی برام بنویس تا برات به تصویر تبدیلش کنم ✨\n\n"
-        "مثلاً:\n"
-        "«یک شهر آینده‌نگر در شب، باران، نورهای نئون، سبک سینمایی و واقع‌گرایانه»\n\n"
-        "💡 هرچه توضیحت دقیق‌تر باشه، نتیجه به چیزی که می‌خوای نزدیک‌تر می‌شه.\n\n"
-        "📷 ویرایش عکس (مخصوص کاربران پریمیوم 💎):\n"
-        "عکست رو بفرست و توی کپشن بنویس چه تغییری می‌خوای؛ مثلاً «پس‌زمینه رو ساحل کن»."
-    ))
+    await message.answer(badge(texts.HELP_TEXT))
 
 
 @router.message(F.text, ~F.text.startswith("/"), ~F.reply_to_message)
