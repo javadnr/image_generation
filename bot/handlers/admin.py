@@ -151,6 +151,38 @@ async def reset_daily_handler(callback: CallbackQuery, session):
     await callback.answer(texts.ADMIN_RESET_DONE)
 
 
+@router.callback_query(F.data == "backup_now")
+async def backup_now(callback: CallbackQuery, session):
+    if callback.from_user.id not in settings.ADMIN_IDS:
+        await callback.answer("⛔ دسترسی ندارید.", show_alert=True)
+        return
+
+    # Same implementation as the scheduled job; no duplicated backup logic.
+    from bot.services.backup import try_reserve_backup, release_reservation, run_backup
+
+    # Claim the slot synchronously so a second rapid click is rejected.
+    if not try_reserve_backup():
+        await callback.answer(texts.ADMIN_BACKUP_BUSY, show_alert=True)
+        return
+
+    await callback.answer(texts.ADMIN_BACKUP_STARTED)
+    bot = callback.bot
+    chat_id = callback.message.chat.id
+
+    async def _job():
+        try:
+            ok = await run_backup(bot, notify=False)
+        finally:
+            release_reservation()
+        text = texts.ADMIN_BACKUP_DONE if ok else texts.ADMIN_BACKUP_FAILED
+        try:
+            await bot.send_message(chat_id, badge(text))
+        except Exception:
+            logger.exception("Failed to report backup outcome")
+
+    asyncio.create_task(_job())
+
+
 @router.message(F.text.startswith("/set_premium"))
 async def set_premium_cmd(message: Message, session):
     if message.from_user.id not in settings.ADMIN_IDS:

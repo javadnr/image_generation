@@ -90,6 +90,12 @@ async def main():
 
     dp.startup.register(on_startup)
 
+    # Daily DB backup runs on the primary (Telegram) instance only, so the
+    # Bale container never starts a duplicate scheduler.
+    if settings.BACKUP_ENABLED and settings.API_SERVER != "bale":
+        from bot.services.backup import start_scheduler
+        start_scheduler(bot)
+
     await dp.start_polling(bot)
 
 

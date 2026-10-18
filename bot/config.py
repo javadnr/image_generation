@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     BALE_PROVIDER_TOKEN: str = ""
     PREMIUM_DURATION_DAYS: int = 30
     PAYMENT_REPORT_CHANNEL_ID: int | None = None
+    BACKUP_ENABLED: bool = True
+    BACKUP_TELEGRAM_CHANNEL_ID: int | None = None
 
     @validator("ADMIN_IDS", pre=True)
     def parse_admin_ids(cls, v):
@@ -58,6 +60,12 @@ class Settings(BaseSettings):
 
     @validator("PAYMENT_REPORT_CHANNEL_ID", pre=True)
     def parse_payment_report_channel(cls, v):
+        if isinstance(v, str) and v.strip() == "":
+            return None
+        return v
+
+    @validator("BACKUP_TELEGRAM_CHANNEL_ID", pre=True)
+    def parse_backup_channel(cls, v):
         if isinstance(v, str) and v.strip() == "":
             return None
         return v

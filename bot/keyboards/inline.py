@@ -112,4 +112,5 @@ def admin_status(bot_enabled: bool) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=toggle_text, callback_data="toggle_bot")],
         [InlineKeyboardButton(text="🔄 ریست روزانه همه", callback_data="reset_daily")],
+        [InlineKeyboardButton(text="💾 پشتیبان‌گیری همین حالا", callback_data="backup_now")],
     ])
