@@ -69,6 +69,7 @@ def catalog(monkeypatch):
     monkeypatch.setattr(settings, "GOLD_MAX_TOKEN", TEST_PLAN_TOKENS["GOLD_MAX_TOKEN"])
     monkeypatch.setattr(settings, "PROFIT_PERCENTAGE", 20.0)
     monkeypatch.setattr(settings, "FREE_USAGE_TOKEN", 1000)
+    monkeypatch.setattr(settings, "ALLOW_FREE", True)
     return TEST_MODELS
 
 

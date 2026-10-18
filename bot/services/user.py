@@ -1,4 +1,5 @@
 import logging
+import re
 
 from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,6 +25,42 @@ async def get_or_create_user(session: AsyncSession, telegram_id: int) -> User:
 def free_generation_enabled() -> bool:
     """Whether free-tier users may generate at all (ALLOW_FREE env flag)."""
     return bool(settings.ALLOW_FREE)
+
+
+# Ad-platform attribution. First-touch wins; the deep-link payload is
+# sanitized to a short token so arbitrary junk never lands in the DB.
+SOURCE_MAX_LEN = 20
+_SOURCE_RE = re.compile(r"^[a-z0-9_-]{1,%d}$" % SOURCE_MAX_LEN)
+# Friendly labels for the admin panel; unknown tokens fall back to raw text.
+SOURCE_LABELS = {
+    "instagram": "اینستاگرام",
+    "youtube": "یوتیوب",
+    "telegram": "تلگرام",
+    "bale": "بله",
+}
+
+
+async def record_source(session: AsyncSession, user: User, payload: str | None) -> None:
+    """Store the ad platform from '/start <payload>' on first touch only."""
+    if user.source or not payload:
+        return
+    token = payload.strip().lower()[:SOURCE_MAX_LEN]
+    if _SOURCE_RE.match(token):
+        user.source = token
+        await session.commit()
+        logger.info("Source recorded: user=%d source=%s", user.telegram_id, token)
+
+
+async def get_source_counts_today(session: AsyncSession) -> dict:
+    """{source-or-'' : new-user count} for today (Tehran day), admins excluded."""
+    start, end = tehran_day_utc_window(today_in_tehran())
+    stmt = (
+        select(User.source, func.count(User.id))
+        .where(User.created_at >= start, User.created_at < end)
+        .group_by(User.source)
+    )
+    result = await session.execute(exclude_admins(stmt))
+    return {(src or ""): count for src, count in result.all()}
 
 
 async def can_generate(session: AsyncSession, user: User) -> bool:

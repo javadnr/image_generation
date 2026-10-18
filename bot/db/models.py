@@ -24,6 +24,7 @@ class User(Base):
     image_model = Column(String(50), default="gpt-image-2.5-flare")
     image_size = Column(String(10), default="square")
     pending_prompt = Column(Text, nullable=True)
+    source = Column(String(20), nullable=True)
     optimize_prompt = Column(Boolean, default=False)
     premium_expire_date = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

@@ -7,6 +7,7 @@ from bot.config import settings
 from bot.services.user import (
     get_all_users_count, get_active_today_count, get_joined_today_count,
     get_tier_users_count, get_tier_images_today, reset_all_daily, set_tier,
+    get_source_counts_today, SOURCE_LABELS,
 )
 from bot.services import analytics as az
 from bot.services.models import images_per_quality, default_model, PLANS
@@ -56,6 +57,9 @@ async def bot_status(message: Message, session):
     pricing_new = await az.get_new_pricing_viewers_today(session)
     plan_sel = await az.get_plan_selection_today(session)
     pay_started, pay_success = await az.get_payments_today(session)
+    src = await get_source_counts_today(session)
+    known = set(SOURCE_LABELS)
+    src_other = sum(n for s, n in src.items() if s and s not in known)
 
     status_text = "فعال" if bot_enabled else "غیرفعال"
 
@@ -65,6 +69,12 @@ async def bot_status(message: Message, session):
             total_users=total_users,
             active_today=active_today,
             joined_today=joined_today,
+            src_instagram=src.get("instagram", 0),
+            src_youtube=src.get("youtube", 0),
+            src_telegram=src.get("telegram", 0),
+            src_bale=src.get("bale", 0),
+            src_other=src_other,
+            src_unknown=src.get("", 0),
             started_today=started_today,
             success_today=success_today,
             failed_today=failed_today,

@@ -1,6 +1,7 @@
 from aiogram import Router, F
+from aiogram.filters import CommandStart
 from aiogram.types import Message, CallbackQuery
-from bot.services.user import get_or_create_user
+from bot.services.user import get_or_create_user, record_source
 from bot.services.analytics import ensure_user_started
 from bot.keyboards.reply import main_menu
 from bot.keyboards.inline import force_join
@@ -11,10 +12,14 @@ from bot.config import settings
 router = Router()
 
 
-@router.message(F.text == "/start")
+@router.message(CommandStart())
 async def cmd_start(message: Message, session):
     user = await get_or_create_user(session, message.from_user.id)
     await ensure_user_started(session, user)
+
+    parts = (message.text or "").split(maxsplit=1)
+    if len(parts) == 2:
+        await record_source(session, user, parts[1])
 
     if settings.REQUIRED_CHANNELS and message.from_user.id not in settings.ADMIN_IDS:
         bot = message.bot

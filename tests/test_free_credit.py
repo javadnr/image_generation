@@ -39,6 +39,7 @@ async def db():
 def free_grant(monkeypatch):
     from bot.config import settings
     monkeypatch.setattr(settings, "FREE_USAGE_TOKEN", 1000)
+    monkeypatch.setattr(settings, "ALLOW_FREE", True)
     return 1000
 
 
