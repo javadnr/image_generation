@@ -10,7 +10,7 @@ import bot.texts as texts
 
 router = Router()
 
-TIER_NAMES_FA = {"free": "آزاد", "bronze": "برنزی", "silver": "نقره‌ای", "gold": "طلایی"}
+TIER_NAMES_FA = {"free": "آزاد", "bronze": "برنزی", "silver": "نقره‌ای", "gold": "طلایی", "diamond": "الماسی"}
 
 
 @router.message(F.text == texts.MAIN_MENU_BALANCE)

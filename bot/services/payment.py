@@ -196,7 +196,10 @@ async def create_bale_purchase(
     session.add(tx)
     await session.commit()
 
-    plan_display = {"bronze": "🥉 برنزی", "silver": "🥈 نقره‌ای", "gold": "🥇 طلایی"}
+    plan_display = {
+        "bronze": "🥉 برنزی", "silver": "🥈 نقره‌ای",
+        "gold": "🥇 طلایی", "diamond": "💎 الماسی",
+    }
     return {
         "transaction_id": tx.id,
         "title": f"اشتراک {plan_display.get(plan, plan)}",

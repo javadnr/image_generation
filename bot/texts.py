@@ -14,7 +14,19 @@ MAIN_MENU_QUALITY = "🖼️ تنظیمات تصویر"
 MAIN_MENU_MODEL = "🤖 انتخاب مدل"
 MAIN_MENU_ADMIN = "📊 وضعیت ربات"
 
-TIER_NAMES_FA = {"bronze": "برنزی", "silver": "نقره‌ای", "gold": "طلایی"}
+TIER_NAMES_FA = {"bronze": "برنزی", "silver": "نقره‌ای", "gold": "طلایی", "diamond": "الماسی"}
+
+# Plan emoji and marketing tags (UI only; ordering comes from models.PLANS).
+PLAN_EMOJI = {"bronze": "🥉", "silver": "🥈", "gold": "🥇", "diamond": "💎"}
+PLAN_TAGS = {"bronze": "", "silver": "⭐ محبوب‌ترین", "gold": "🔥 بیشترین اعتبار", "diamond": "💠 حرفه‌ای‌ترین"}
+
+# Who each paid plan is for (purchase menu).
+PLAN_DESCRIPTIONS = {
+    "bronze": "مناسب کاربران تازه‌کار برای آشنایی و امتحان سرویس",
+    "silver": "مناسب کاربران با مصرف بیشتر، مثل تولیدکنندگان محتوا",
+    "gold": "مناسب کاربران حرفه‌ای که به‌طور منظم تصویر می‌سازند یا ویرایش می‌کنند",
+    "diamond": "مناسب تیم‌ها و گروه‌های حرفه‌ای با مصرف بالا",
+}
 
 GENERATING = "⏳ در حال تGENERATING..."
 GENERATION_SUCCESS = "✅ تصویر با موفقیت ساخته شد!"
@@ -89,17 +101,19 @@ ADMIN_STATS = (
     "💎 خرید امروز:\n"
     "  کلیک اشتراک: {click_unique} نفر ({click_total} کلیک)\n"
     "  مشاهده قیمت: {pricing_viewers} نفر (جدید: {pricing_new} نفر)\n"
-    "  انتخاب پلن: 🥉{plan_bronze} 🥈{plan_silver} 🥇{plan_gold}\n"
+    "  انتخاب پلن: 🥉{plan_bronze} 🥈{plan_silver} 🥇{plan_gold} 💎{plan_diamond}\n"
     "  شروع پرداخت: {pay_started} | موفق: {pay_success}\n\n"
     "🖼 تصاویر امروز:\n"
     "  آزاد: {free_images}\n"
     "  برنزی: {bronze_images}\n"
     "  نقره‌ای: {silver_images}\n"
-    "  طلایی: {gold_images}\n\n"
+    "  طلایی: {gold_images}\n"
+    "  الماسی: {diamond_images}\n\n"
     "💎 پریمیوم‌ها:\n"
     "  برنزی: {bronze_users}\n"
     "  نقره‌ای: {silver_users}\n"
-    "  طلایی: {gold_users}\n\n"
+    "  طلایی: {gold_users}\n"
+    "  الماسی: {diamond_users}\n\n"
     "🛠 دستورات مدیر:\n"
     "  /stats — آمار کلی\n"
     "  /set_premium <user_id> <tier> — تغییر پلن\n"
@@ -129,12 +143,12 @@ ADMIN_USERINFO_USAGE = "استفاده: /userinfo <user_id>\nمثال: /userinfo
 ADMIN_DEACTIVATED = "✅ کاربر {user_id} به پلن رایگان بازگشت."
 USER_DEACTIVATED = "📦 اشتراک شما به پایان رسید و به پلن رایگان بازگشتید.\n💎 برای تهیه اشتراک جدید، از دکمه «خرید اشتراک» استفاده کنید."
 ADMIN_ACTIVATED = "✅ پریمیوم {tier} برای کاربر {user_id} فعال شد."
-ADMIN_INVALID_TIER = "⚠️ پلن نامعتبر. tiers: free, bronze, silver, gold"
+ADMIN_INVALID_TIER = "⚠️ پلن نامعتبر. tiers: free, bronze, silver, gold, diamond"
 ADMIN_REPORT = "💎 اکانت پریمیوم فعال شد\n👤 کاربر: {user_id}\n📦 پلن: {tier}\n💰 قیمت: {price} تومان"
 ADMIN_BROADCAST_USAGE = "استفاده:\n/broadcast متن پیام\nیا روی یک پیام ریپلای کنید و بنویسید:\n/broadcast"
 ADMIN_BROADCAST_STARTED = "⏳ ارسال همگانی شروع شد..."
 ADMIN_BROADCAST_DONE = "✅ ارسال همگانی تمام شد\n✔️ موفق: {ok}\n❌ ناموفق: {fail}"
-ADMIN_OFF_USAGE = "استفاده:\n/off <bronze|silver|gold|all> <percent> <days>\nمثال:\n/off bronze 15 1\n/off all 10 1\nبرای لغو: درصد را ۰ بگذارید."
+ADMIN_OFF_USAGE = "استفاده:\n/off <bronze|silver|gold|diamond|all> <percent> <days>\nمثال:\n/off bronze 15 1\n/off all 10 1\nبرای لغو: درصد را ۰ بگذارید."
 ADMIN_OFF_DONE = "✅ تخفیف {percent}٪ برای {scope} تا {until} فعال شد."
 ADMIN_OFF_CLEARED = "✅ تخفیف {scope} لغو شد."
 ADMIN_ENDOFF_DONE = "✅ همه تخفیف‌ها لغو شد ({count} مورد)."

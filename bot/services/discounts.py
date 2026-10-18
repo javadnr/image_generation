@@ -14,7 +14,7 @@ from bot.db.models import Discount, User
 
 logger = logging.getLogger(__name__)
 
-VALID_SCOPES = ("bronze", "silver", "gold", "all")
+VALID_SCOPES = ("bronze", "silver", "gold", "diamond", "all")
 
 
 def parse_off_command(text: str):

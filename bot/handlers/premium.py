@@ -8,7 +8,7 @@ from bot.services.analytics import (
     PLAN_SELECTED, PAYMENT_STARTED,
 )
 from bot.services.models import (
-    plan_allowance, default_model, images_per_quality,
+    PLANS, plan_allowance, default_model, images_per_quality,
     edits_available,
 )
 from bot.services.payment import (
@@ -26,7 +26,10 @@ import bot.texts as texts
 
 router = Router()
 
-TIER_NAMES = {"free": "ندارد", "bronze": "🥉 برنزی", "silver": "🥈 نقره‌ای", "gold": "🥇 طلایی"}
+TIER_NAMES = {
+    "free": "ندارد", "bronze": "🥉 برنزی", "silver": "🥈 نقره‌ای",
+    "gold": "🥇 طلایی", "diamond": "💎 الماسی",
+}
 
 
 def tooman_display(price: int | None) -> str:
@@ -62,10 +65,10 @@ def _fx_note() -> str | None:
 
 def _quality_breakdown_text() -> str:
     lines = []
-    for plan, emoji in (("bronze", "🥉"), ("silver", "🥈"), ("gold", "🥇")):
+    for plan in PLANS:
         breakdown = _quality_breakdown(plan_allowance(plan))
         if breakdown:
-            lines.append(f"{emoji} {breakdown}")
+            lines.append(f"{texts.PLAN_EMOJI[plan]} {breakdown}")
     if not lines:
         return ""
     return "📊 تعداد تقریبی تصاویر هر پلن بر اساس کیفیت:\n" + "\n".join(lines) + "\n"
@@ -87,6 +90,19 @@ def _plan_header(emoji: str, tier: str, discounts: dict | None) -> str:
     return line
 
 
+def _plan_block(tier: str, discounts: dict | None) -> str:
+    """Purchase-menu entry: header + discount, target audience, allowance."""
+    header = _plan_header(texts.PLAN_EMOJI[tier], tier, discounts)
+    tag = texts.PLAN_TAGS.get(tier, "")
+    if tag:
+        header += f" {tag}"
+    return (
+        f"{header}\n"
+        f"📝 {texts.PLAN_DESCRIPTIONS.get(tier, '')}\n"
+        f"• {plan_allowance(tier):,} اعتبار"
+    )
+
+
 def premium_text(user, discounts: dict | None = None) -> str:
     if user.tier != "free" and user.premium_expire_date:
         expire = user.premium_expire_date.strftime("%Y/%m/%d")
@@ -106,18 +122,14 @@ def premium_text(user, discounts: dict | None = None) -> str:
             f"⏳ روزهای باقی‌مانده: {remaining}"
         )
 
+    plan_blocks = "\n\n".join(_plan_block(tier, discounts) for tier in PLANS)
     return badge(
         f"💎 پلن‌های پریمیوم\n\n"
         f"با خرید پریمیوم، تصاویر با کیفیت تر بساز! 🚀\n"
         f"📅 همه پلن‌ها ماهانه هستند.\n\n"
         f"🆓 پلن رایگان\n"
         f"• {settings.FREE_USAGE_TOKEN:,} اعتبار\n\n"
-        f"{_plan_header('🥉', 'bronze', discounts)}\n"
-        f"• {plan_allowance('bronze'):,} اعتبار\n\n"
-        f"{_plan_header('🥈', 'silver', discounts)} ⭐ محبوب‌ترین\n"
-        f"• {plan_allowance('silver'):,} اعتبار\n\n"
-        f"{_plan_header('🥇', 'gold', discounts)} 🔥 بیشترین اعتبار\n"
-        f"• {plan_allowance('gold'):,} اعتبار\n\n"
+        f"{plan_blocks}\n\n"
         f"📌 توجه: تعداد تصاویر نمایش‌داده‌شده بر اساس کیفیت پایین است. "
         f"تولید تصویر با کیفیت بالاتر، از موجودی شما بیشتر کم می‌کند.\n"
         f"{_quality_breakdown_text()}\n"
@@ -158,7 +170,7 @@ async def show_plans(callback: CallbackQuery, session):
 @router.callback_query(F.data.startswith("buy_"))
 async def buy_tier(callback: CallbackQuery, session):
     tier = callback.data.replace("buy_", "")
-    if tier not in ("bronze", "silver", "gold"):
+    if tier not in PLANS:
         await callback.answer(texts.ADMIN_INVALID_TIER, show_alert=True)
         return
 

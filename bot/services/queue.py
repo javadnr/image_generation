@@ -10,7 +10,8 @@ def init_queues():
         "free": asyncio.Semaphore(settings.FREE_QUEUE_SIZE) if settings.FREE_QUEUE_SIZE > 0 else None,
         "bronze": asyncio.Semaphore(settings.BRONZE_QUEUE_SIZE) if settings.BRONZE_QUEUE_SIZE > 0 else None,
         "silver": asyncio.Semaphore(settings.SILVER_QUEUE_SIZE) if settings.SILVER_QUEUE_SIZE > 0 else None,
-        "gold": None,
+        "gold": asyncio.Semaphore(settings.GOLD_QUEUE_SIZE) if settings.GOLD_QUEUE_SIZE > 0 else None,
+        "diamond": asyncio.Semaphore(settings.DIAMOND_QUEUE_SIZE) if settings.DIAMOND_QUEUE_SIZE > 0 else None,
     }
 
 

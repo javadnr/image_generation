@@ -9,7 +9,7 @@ from bot.services.user import (
     get_tier_users_count, get_tier_images_today, reset_all_daily, set_tier,
 )
 from bot.services import analytics as az
-from bot.services.models import images_per_quality, default_model
+from bot.services.models import images_per_quality, default_model, PLANS
 from bot.services.payment import activate_plan, deactivate_plan
 from bot.keyboards.inline import admin_status, plans_button
 from bot.keyboards.reply import main_menu
@@ -41,10 +41,12 @@ async def bot_status(message: Message, session):
     bronze_images = await get_tier_images_today(session, "bronze")
     silver_images = await get_tier_images_today(session, "silver")
     gold_images = await get_tier_images_today(session, "gold")
+    diamond_images = await get_tier_images_today(session, "diamond")
 
     bronze_users = await get_tier_users_count(session, "bronze")
     silver_users = await get_tier_users_count(session, "silver")
     gold_users = await get_tier_users_count(session, "gold")
+    diamond_users = await get_tier_users_count(session, "diamond")
 
     started_today = await az.get_images_started_today(session)
     success_today = await az.get_images_success_today(session)
@@ -73,15 +75,18 @@ async def bot_status(message: Message, session):
             plan_bronze=plan_sel.get("bronze", 0),
             plan_silver=plan_sel.get("silver", 0),
             plan_gold=plan_sel.get("gold", 0),
+            plan_diamond=plan_sel.get("diamond", 0),
             pay_started=pay_started,
             pay_success=pay_success,
             free_images=free_images,
             bronze_images=bronze_images,
             silver_images=silver_images,
             gold_images=gold_images,
+            diamond_images=diamond_images,
             bronze_users=bronze_users,
             silver_users=silver_users,
             gold_users=gold_users,
+            diamond_users=diamond_users,
         )
     )
 
@@ -142,7 +147,7 @@ async def set_premium_cmd(message: Message, session):
         return
 
     tier = parts[2].lower()
-    if tier not in ("free", "bronze", "silver", "gold"):
+    if tier not in ("free", *PLANS):
         await message.answer(badge(texts.ADMIN_INVALID_TIER))
         return
 
@@ -169,7 +174,7 @@ async def activate_cmd(message: Message, session):
         return
 
     tier = parts[1].lower()
-    if tier not in ("bronze", "silver", "gold"):
+    if tier not in PLANS:
         await message.answer(badge(texts.ADMIN_INVALID_TIER))
         return
 

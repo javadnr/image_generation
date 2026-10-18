@@ -1,6 +1,6 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from bot.config import settings
-from bot.services.models import model_ids, model_label, is_free_model
+from bot.services.models import PLANS, model_ids, model_label, is_free_model
 from bot.services.pricing import plan_price_toman
 import bot.texts as texts
 
@@ -29,11 +29,12 @@ def premium_menu(user, discounts: dict | None = None) -> InlineKeyboardMarkup:
     from bot.services.discounts import discount_for
     buttons = []
     if user.tier == "free":
-        tier_tags = {"bronze": "", "silver": "⭐ محبوب‌ترین", "gold": "🔥 بیشترین اعتبار"}
-        for tier, emoji in [("bronze", "🥉"), ("silver", "🥈"), ("gold", "🥇")]:
+        for tier in PLANS:
+            emoji = texts.PLAN_EMOJI[tier]
+            tier_tag = texts.PLAN_TAGS.get(tier, "")
             pct = discount_for(tier, discounts)
             price = plan_price_toman(tier, pct)
-            tag = f"🔥 {pct}٪ تخفیف {tier_tags[tier]}".strip() if pct else tier_tags[tier]
+            tag = f"🔥 {pct}٪ تخفیف {tier_tag}".strip() if pct else tier_tag
             price_text = (
                 f"{to_persian_digits(price // 1000)} هزار تومان"
                 if price is not None else "قیمت نامشخص"
