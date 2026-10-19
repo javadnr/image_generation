@@ -350,3 +350,66 @@ async def test_edit_deduct_applies_profit(db, catalog, monkeypatch):
     # edit reported 700 actual tokens -> 840 charged at 20% profit
     remaining = await user_svc.deduct_tokens(db, user, 700)
     assert remaining == 9160
+
+
+# ---------- subscription lifecycle: low-balance auto-deactivation ----------
+
+@pytest.mark.asyncio
+async def test_paid_user_below_low_minimum_is_deactivated(db, catalog):
+    from datetime import datetime, timedelta
+    user = await _make_user(db, 1001, tier="gold", token_balance=10)
+    user.premium_expire_date = datetime.utcnow() + timedelta(days=30)
+
+    assert await user_svc.maybe_deactivate_low_balance(db, user) is True
+    assert user.tier == "free"
+    assert user.premium_expire_date is None
+    # balance preserved exactly — not zeroed, not topped up
+    assert user.token_balance == 10
+
+
+@pytest.mark.asyncio
+async def test_paid_user_at_minimum_stays(db, catalog):
+    # low-quality raw minimum is 200 in the test catalog
+    user = await _make_user(db, 1002, tier="bronze", token_balance=200)
+    assert await user_svc.maybe_deactivate_low_balance(db, user) is False
+    assert user.tier == "bronze"
+    assert user.token_balance == 200
+
+
+@pytest.mark.asyncio
+async def test_paid_user_above_minimum_stays(db, catalog):
+    user = await _make_user(db, 1003, tier="diamond", token_balance=205)
+    assert await user_svc.maybe_deactivate_low_balance(db, user) is False
+    assert user.tier == "diamond"
+
+
+@pytest.mark.asyncio
+async def test_paid_user_zero_balance_deactivated(db, catalog):
+    user = await _make_user(db, 1004, tier="silver", token_balance=0)
+    assert await user_svc.maybe_deactivate_low_balance(db, user) is True
+    assert user.tier == "free"
+    assert user.token_balance == 0
+
+
+@pytest.mark.asyncio
+async def test_free_user_never_deactivated(db, catalog):
+    user = await _make_user(db, 1005, tier="free", token_balance=0)
+    assert await user_svc.maybe_deactivate_low_balance(db, user) is False
+    assert user.tier == "free"
+
+
+@pytest.mark.asyncio
+async def test_threshold_reads_config_not_hardcoded(db, catalog, monkeypatch):
+    from bot.config import settings
+    monkeypatch.setattr(settings, "MODELS", {
+        "mystery": {"free": True, "cost": {"low": {"cost": 0.0, "tokens": 999}}},
+    })
+    user = await _make_user(db, 1006, tier="gold", token_balance=500, model="mystery")
+    # 500 >= old hardcoded 200, but the configured minimum is 999
+    assert await user_svc.maybe_deactivate_low_balance(db, user) is True
+
+
+@pytest.mark.asyncio
+async def test_none_model_falls_back_to_default(db, catalog):
+    user = await _make_user(db, 1007, tier="gold", token_balance=10, model=None)
+    assert await user_svc.maybe_deactivate_low_balance(db, user) is True

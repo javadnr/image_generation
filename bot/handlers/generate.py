@@ -5,6 +5,7 @@ from bot.config import settings
 from bot.services.user import (
     get_or_create_user, can_generate, deduct_tokens, set_generating,
     set_pending_prompt, clear_pending_prompt, claim_pending_prompt,
+    maybe_deactivate_low_balance,
 )
 from bot.services.analytics import (
     log_event, maybe_log_first_generation_start,
@@ -130,6 +131,8 @@ async def confirm_yes(callback: CallbackQuery, session):
 
 async def _run_generation(message, session, user, prompt_text, tg_user, bot, gen_msg):
     width, height = 1024, 1024
+    # Captured before any tier change so the right semaphore is released.
+    queue_tier = user.tier
     try:
         width, height = image_dimensions(user.image_size or DEFAULT_IMAGE_SIZE)
         logging.info("User %d tier=%s generating %dx%d", user.telegram_id, user.tier, width, height)
@@ -175,17 +178,23 @@ async def _run_generation(message, session, user, prompt_text, tg_user, bot, gen
 
         await deduct_tokens(session, user, tokens)
         await log_event(session, user, IMAGE_GENERATION_SUCCESS, {"tier": user.tier})
-        left = images_per_quality(user.token_balance or 0, model_id).get(quality)
-        if left == 0:
+        if await maybe_deactivate_low_balance(session, user):
             await message.answer(
-                badge(texts.CREDIT_SPENT),
+                badge(texts.PLAN_DEACTIVATED_LOW_BALANCE),
                 reply_markup=plans_button(),
             )
-        elif left == 1:
-            await message.answer(
-                badge(texts.CREDIT_LOW),
-                reply_markup=plans_button(),
-            )
+        else:
+            left = images_per_quality(user.token_balance or 0, model_id).get(quality)
+            if left == 0:
+                await message.answer(
+                    badge(texts.CREDIT_SPENT),
+                    reply_markup=plans_button(),
+                )
+            elif left == 1:
+                await message.answer(
+                    badge(texts.CREDIT_LOW),
+                    reply_markup=plans_button(),
+                )
         await send_processed_report(
             bot,
             user_id=tg_user.id,
@@ -226,4 +235,4 @@ async def _run_generation(message, session, user, prompt_text, tg_user, bot, gen
             await message.answer(badge(error_msg))
     finally:
         await set_generating(session, user, False)
-        release_queue(user.tier, user.telegram_id)
+        release_queue(queue_tier, user.telegram_id)

@@ -4,7 +4,10 @@ import tempfile
 from aiogram import Router, F
 from aiogram.types import Message, BufferedInputFile
 from bot.config import settings
-from bot.services.user import get_or_create_user, set_generating, has_edit_balance, deduct_tokens
+from bot.services.user import (
+    get_or_create_user, set_generating, has_edit_balance, deduct_tokens,
+    maybe_deactivate_low_balance,
+)
 from bot.services.analytics import (
     log_event, IMAGE_GENERATION_STARTED, IMAGE_GENERATION_SUCCESS, IMAGE_GENERATION_FAILED,
 )
@@ -40,7 +43,9 @@ async def handle_photo_edit(message: Message, session, bot):
         await message.answer(badge("⏳ لطفاً صبر کنید. تصویر قبلی در حال ساخت است."))
         return
 
-    if not await acquire_queue(user.tier, user.telegram_id):
+    # Captured before any tier change so the right semaphore is released.
+    queue_tier = user.tier
+    if not await acquire_queue(queue_tier, user.telegram_id):
         await message.answer(badge("⏳ لطفاً کمی صبر کنید و دوباره تلاش کنید..."))
         return
 
@@ -100,7 +105,12 @@ async def handle_photo_edit(message: Message, session, bot):
 
         await deduct_tokens(session, user, tokens)
         await log_event(session, user, IMAGE_GENERATION_SUCCESS, {"tier": user.tier})
-        if (user.token_balance or 0) == 0:
+        if await maybe_deactivate_low_balance(session, user):
+            await message.answer(
+                badge(texts.PLAN_DEACTIVATED_LOW_BALANCE),
+                reply_markup=plans_button(),
+            )
+        elif (user.token_balance or 0) == 0:
             await message.answer(
                 badge(texts.CREDIT_SPENT),
                 reply_markup=plans_button(),
@@ -147,7 +157,7 @@ async def handle_photo_edit(message: Message, session, bot):
             await message.answer(badge(error_msg))
     finally:
         await set_generating(session, user, False)
-        release_queue(user.tier, user.telegram_id)
+        release_queue(queue_tier, user.telegram_id)
 
 
 @router.message(F.photo, ~F.caption)

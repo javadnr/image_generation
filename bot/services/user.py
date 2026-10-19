@@ -129,6 +129,32 @@ async def deduct_tokens(session: AsyncSession, user: User, amount: int | None) -
     return user.token_balance
 
 
+async def maybe_deactivate_low_balance(session: AsyncSession, user: User) -> bool:
+    """Return a paid user to Free when they can no longer fund a low-quality image.
+
+    Call only after a successful operation and its deduction. The minimum is
+    the raw configured low-quality estimate for the user's model (the same
+    value can_generate enforces). The remaining balance is preserved exactly —
+    no reset, no top-up — and free-tier users are never affected.
+    """
+    from bot.services.models import estimate_tokens, default_model
+    if user.tier == "free":
+        return False
+    minimum = estimate_tokens(user.image_model or default_model(), "low")
+    if minimum is None:
+        return False
+    if (user.token_balance or 0) >= minimum:
+        return False
+    user.tier = "free"
+    user.premium_expire_date = None
+    await session.commit()
+    logger.info(
+        "Plan auto-deactivated (low balance): user=%d balance=%d minimum=%d",
+        user.telegram_id, user.token_balance, minimum,
+    )
+    return True
+
+
 def get_edit_cost() -> int:
     return settings.IMAGE_EDIT_COST_TOKENS
 
