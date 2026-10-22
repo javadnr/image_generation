@@ -17,13 +17,16 @@ IMAGE_SIZES maps aspect-ratio keys to API pixel dimensions. Sizes are
 sent to the image API exactly as configured here — if a model rejects a
 ratio, the failure surfaces through the normal error path instead of
 silently substituting a different size.
+
+The image API only accepts sizes where both sides are multiples of 16
+and at least 1024px; every entry must satisfy that.
 """
 IMAGE_SIZES = {
     "square": {"label": "Square (1:1)", "width": 1024, "height": 1024},
-    "portrait": {"label": "Portrait (3:4)", "width": 768, "height": 1024},
-    "story": {"label": "Story (9:16)", "width": 576, "height": 1024},
-    "landscape": {"label": "Landscape (4:3)", "width": 1024, "height": 768},
-    "widescreen": {"label": "Widescreen (16:9)", "width": 1024, "height": 576},
+    "portrait": {"label": "Portrait (3:4)", "width": 1024, "height": 1344},
+    "story": {"label": "Story (9:16)", "width": 1024, "height": 1792},
+    "landscape": {"label": "Landscape (4:3)", "width": 1344, "height": 1024},
+    "widescreen": {"label": "Widescreen (16:9)", "width": 1792, "height": 1024},
 }
 DEFAULT_IMAGE_SIZE = "square"
 VALID_IMAGE_SIZES = tuple(IMAGE_SIZES)

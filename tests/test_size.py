@@ -72,17 +72,19 @@ def test_size_catalog_complete():
     assert DEFAULT_IMAGE_SIZE == "square"
     assert set(VALID_IMAGE_SIZES) == set(IMAGE_SIZES)
     for key, entry in IMAGE_SIZES.items():
-        assert entry["width"] % 64 == 0
-        assert entry["height"] % 64 == 0
+        # API rule: both sides at least 1024px and divisible by 16
+        assert entry["width"] % 16 == 0
+        assert entry["height"] % 16 == 0
+        assert min(entry["width"], entry["height"]) >= 1024
         assert max(entry["width"], entry["height"]) / min(entry["width"], entry["height"]) <= 16 / 9
 
 
 def test_image_dimensions_mapping():
     assert image_dimensions("square") == (1024, 1024)
-    assert image_dimensions("portrait") == (768, 1024)
-    assert image_dimensions("story") == (576, 1024)
-    assert image_dimensions("landscape") == (1024, 768)
-    assert image_dimensions("widescreen") == (1024, 576)
+    assert image_dimensions("portrait") == (1024, 1344)
+    assert image_dimensions("story") == (1024, 1792)
+    assert image_dimensions("landscape") == (1344, 1024)
+    assert image_dimensions("widescreen") == (1792, 1024)
     assert size_label("story") == "Story (9:16)"
 
 
