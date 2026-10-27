@@ -73,6 +73,7 @@ class Transaction(Base):
     amount = Column(Integer, nullable=False)
     status = Column(String(20), default="pending")
     payment_authority = Column(String(255), nullable=True)
+    payment_link = Column(String(512), nullable=True)
     payment_ref_id = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     paid_at = Column(DateTime, nullable=True)

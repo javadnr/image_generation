@@ -86,7 +86,7 @@ async def create_zarinpal_purchase(
 ) -> dict:
     existing, remaining = await _find_pending_tx(session, user.id, plan)
     if existing and existing.payment_authority:
-        payment_link = f"https://www.zarinpal.com/pg/StartPay/{existing.payment_authority}"
+        payment_link = existing.payment_link or f"https://www.zarinpal.com/pg/StartPay/{existing.payment_authority}"
         return {
             "transaction_id": existing.id,
             "payment_link": payment_link,
@@ -118,6 +118,7 @@ async def create_zarinpal_purchase(
         amount=amount,
         status="pending",
         payment_authority=authority,
+        payment_link=payment_link,
     )
     session.add(tx)
     await session.commit()
