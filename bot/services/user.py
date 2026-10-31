@@ -1,5 +1,6 @@
 import logging
 import re
+from datetime import datetime
 
 from sqlalchemy import select, update, func, case
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +12,15 @@ from bot.utils.timezone import tehran_day_utc_window, today_in_tehran
 logger = logging.getLogger(__name__)
 
 
+def _plan_expired(user: User) -> bool:
+    """True when an active plan's expiry date has passed."""
+    return (
+        user.tier != "free"
+        and user.premium_expire_date is not None
+        and user.premium_expire_date <= datetime.now()
+    )
+
+
 async def get_or_create_user(session: AsyncSession, telegram_id: int) -> User:
     result = await session.execute(select(User).where(User.telegram_id == telegram_id))
     user = result.scalar_one_or_none()
@@ -19,6 +29,21 @@ async def get_or_create_user(session: AsyncSession, telegram_id: int) -> User:
         session.add(user)
         await session.commit()
         await session.refresh(user)
+        return user
+    if _plan_expired(user):
+        # Subscription ended: back to free (current .env grant), so the
+        # next purchase records the new .env limits in a fresh snapshot.
+        user.tier = "free"
+        user.premium_expire_date = None
+        user.plan_snapshot = None
+        user.token_balance = settings.FREE_USAGE_TOKEN
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+        logger.info(
+            "Plan expired, reverted to free: user=%d balance=%d",
+            user.telegram_id, user.token_balance,
+        )
     return user
 
 
@@ -147,6 +172,7 @@ async def maybe_deactivate_low_balance(session: AsyncSession, user: User) -> boo
         return False
     user.tier = "free"
     user.premium_expire_date = None
+    user.plan_snapshot = None
     await session.commit()
     logger.info(
         "Plan auto-deactivated (low balance): user=%d balance=%d minimum=%d",
@@ -155,7 +181,15 @@ async def maybe_deactivate_low_balance(session: AsyncSession, user: User) -> boo
     return True
 
 
-def get_edit_cost() -> int:
+def get_edit_cost(user: User | None = None) -> int:
+    """Edit price for a subscriber: their activation-time snapshot wins
+    over the live .env so later IMAGE_EDIT_COST_TOKENS changes leave
+    active plans untouched. Users activated before snapshots fall back
+    to .env."""
+    if user and user.tier != "free" and user.plan_snapshot:
+        snap_cost = (user.plan_snapshot or {}).get("edit_cost")
+        if isinstance(snap_cost, int) and snap_cost > 0:
+            return snap_cost
     return settings.IMAGE_EDIT_COST_TOKENS
 
 
@@ -163,11 +197,11 @@ def has_edit_balance(user: User) -> bool:
     """Premium-only gate helper: enough balance for one fixed-cost edit."""
     if user.tier == "free":
         return False
-    return (user.token_balance or 0) >= get_edit_cost()
+    return (user.token_balance or 0) >= get_edit_cost(user)
 
 
 async def set_tier(session: AsyncSession, telegram_id: int, tier: str) -> User | None:
-    from bot.services.models import plan_allowance
+    from bot.services.models import plan_allowance, plan_snapshot
     result = await session.execute(select(User).where(User.telegram_id == telegram_id))
     user = result.scalar_one_or_none()
     if user:
@@ -175,6 +209,8 @@ async def set_tier(session: AsyncSession, telegram_id: int, tier: str) -> User |
         user.token_balance = (
             plan_allowance(tier) if tier != "free" else settings.FREE_USAGE_TOKEN
         )
+        # Admin-assigned tiers get today's limits, same as paying users.
+        user.plan_snapshot = plan_snapshot(tier) if tier != "free" else None
         await session.commit()
         await session.refresh(user)
         logger.info(

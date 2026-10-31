@@ -27,6 +27,9 @@ class User(Base):
     source = Column(String(64), nullable=True)
     optimize_prompt = Column(Boolean, default=False)
     premium_expire_date = Column(DateTime, nullable=True)
+    # Limitations recorded at activation time; .env changes never touch
+    # active subscribers. Cleared on every revert to free.
+    plan_snapshot = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     images = relationship("GeneratedImage", back_populates="user", cascade="all, delete-orphan")

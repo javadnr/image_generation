@@ -181,3 +181,12 @@ def plan_allowance(plan: str) -> int:
         "gold": settings.GOLD_MAX_TOKEN,
         "diamond": settings.DIAMOND_MAX_TOKEN,
     }.get(plan, 0)
+
+
+def plan_snapshot(plan: str) -> dict:
+    """Limitations of a plan, captured at activation time.
+
+    Active subscribers keep these values even if the .env changes later;
+    the next purchase records the new values instead.
+    """
+    return {"tokens": plan_allowance(plan), "edit_cost": settings.IMAGE_EDIT_COST_TOKENS}

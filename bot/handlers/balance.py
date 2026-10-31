@@ -31,7 +31,7 @@ async def balance(message: Message, session):
         for q, count in images_per_quality(balance_credits, model).items()
     ]
     lines.append(
-        f"• ویرایش عکس: {edits_available(balance_credits, get_edit_cost()):,} تصویر"
+        f"• ویرایش عکس: {edits_available(balance_credits, get_edit_cost(user)):,} تصویر"
     )
     text = texts.QUOTA_REMAINING_TOKENS.format(
         tier=tier_name,

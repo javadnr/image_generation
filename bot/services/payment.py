@@ -26,6 +26,11 @@ def _plan_tokens(plan: str) -> int:
     return plan_allowance(plan)
 
 
+def _plan_snapshot(plan: str) -> dict:
+    from bot.services.models import plan_snapshot
+    return plan_snapshot(plan)
+
+
 def get_zarinpal_client() -> ZarinPalClient:
     return ZarinPalClient(settings.ZARINPAL_API_URL, settings.ZARINPAL_PROJECT_ID)
 
@@ -63,6 +68,7 @@ async def activate_plan(
     user.tier = plan
     user.premium_expire_date = datetime.now() + timedelta(days=duration)
     user.token_balance = _plan_tokens(plan)
+    user.plan_snapshot = _plan_snapshot(plan)
     await session.commit()
     logger.info(
         "Plan activated: user=%d plan=%s days=%d balance=%d",
@@ -74,6 +80,7 @@ async def deactivate_plan(session: AsyncSession, user: User) -> None:
     user.tier = "free"
     user.premium_expire_date = None
     user.token_balance = settings.FREE_USAGE_TOKEN
+    user.plan_snapshot = None
     await session.commit()
     logger.info(
         "Plan deactivated: user=%d balance=%d",
