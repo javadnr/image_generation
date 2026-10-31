@@ -1,7 +1,7 @@
 """Add users.plan_snapshot for activation-time plan limitations.
 
 Revision ID: 0008_user_plan_snapshot
-Revises: 0007_add_transaction_payment_link
+Revises: 0007_tx_paylink
 """
 from typing import Sequence, Union
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 revision: str = "0008_user_plan_snapshot"
-down_revision: Union[str, None] = "0007_add_transaction_payment_link"
+down_revision: Union[str, None] = "0007_tx_paylink"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
