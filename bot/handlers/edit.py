@@ -63,6 +63,13 @@ async def handle_photo_edit(message: Message, session, bot):
         await answer_quota_exceeded(message, session, user)
         return
 
+    quality = user.image_quality or "low"
+    from bot.services.user import has_edit_quality_balance, edit_quality_min_balance
+    if not has_edit_quality_balance(user, quality):
+        threshold = edit_quality_min_balance(quality)
+        await message.answer(badge(f"⚠️ برای ویرایش با کیفیت {texts.QUALITY_LABELS.get(quality, quality)} حداقل {threshold:,} اعتبار لازم است."))
+        return
+
     if user.is_generating:
         await message.answer(badge("⏳ لطفاً صبر کنید. تصویر قبلی در حال ساخت است."))
         return
