@@ -5,7 +5,9 @@ from bot.services.models import (
     default_model, images_per_quality, VALID_IMAGE_SIZES,
     size_label, DEFAULT_IMAGE_SIZE,
 )
-from bot.keyboards.inline import quality_keyboard, size_keyboard, settings_hub_keyboard, confirm_keyboard
+from bot.keyboards.inline import (
+    quality_keyboard, size_keyboard, settings_hub_keyboard, confirm_keyboard
+)
 from bot.texts import badge
 import bot.texts as texts
 
@@ -141,14 +143,9 @@ async def size_set(callback: CallbackQuery, session):
     await set_size(session, user, value)
     try:
         await callback.message.edit_text(
-            badge(_size_menu_text(user)),
-            reply_markup=size_keyboard(value, show_back=True),
+            badge(f"سایز {size_label(value)} انتخاب شد."),
+            reply_markup=None,
         )
     except Exception:
         pass
-    await callback.answer(
-        texts.SIZE_SET.format(label=size_label(value))
-    )
-
-    if user.pending_prompt and not user.is_generating:
-        await send_confirm(callback.message, user.pending_prompt)
+    await callback.answer()

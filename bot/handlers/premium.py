@@ -1,7 +1,7 @@
 from datetime import datetime
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-from bot.services.user import get_or_create_user, get_edit_cost
+from bot.services.user import get_or_create_user
 from bot.services.report import send_premium_report
 from bot.services.analytics import (
     log_event, maybe_log_free_limit, PRICING_VIEWED, BUY_SUBSCRIPTION_CLICKED,
@@ -9,7 +9,6 @@ from bot.services.analytics import (
 )
 from bot.services.models import (
     PLANS, plan_allowance, default_model, images_per_quality,
-    edits_available,
 )
 from bot.services.payment import (
     create_zarinpal_purchase, verify_zarinpal_payment,
@@ -50,7 +49,6 @@ def _quality_breakdown(allowance: int) -> str | None:
         f"{count:,} {QUALITY_FA[quality]}"
         for quality, count in per_quality.items()
     ]
-    parts.append(f"{edits_available(allowance, get_edit_cost())} ویرایش")
     return " | ".join(parts) if parts else None
 
 
@@ -135,9 +133,8 @@ def premium_text(user, discounts: dict | None = None) -> str:
         f"📅 همه پلن‌ها ماهانه هستند.\n\n"
         f"{free_block}"
         f"{plan_blocks}\n\n"
-        f"📌 توجه: تعداد تصاویر نمایش‌داده‌شده بر اساس کیفیت پایین است. "
-        f"تولید تصویر با کیفیت بالاتر، از موجودی شما بیشتر کم می‌کند.\n"
         f"{_quality_breakdown_text()}\n"
+        f"{texts.EDIT_COUNT_NOTE}\n\n"
         f"{_fx_note_text()}\n"
         f"👇 پلن موردنظرت رو انتخاب کن:"
     )

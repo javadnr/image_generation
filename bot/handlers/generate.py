@@ -21,7 +21,11 @@ from bot.services.models import (
 )
 from bot.services.report import send_error_report, send_processed_report
 from bot.keyboards.reply import main_menu
-from bot.keyboards.inline import plans_button, confirm_keyboard, size_keyboard
+from bot.keyboards.inline import (
+    plans_button, confirm_keyboard,
+    confirm_size_keyboard, confirm_quality_keyboard,
+    confirm_edit_keyboard,
+)
 from bot.texts import badge
 import bot.texts as texts
 
@@ -45,6 +49,25 @@ async def help_message(message: Message, session):
     await message.answer(badge(texts.HELP_TEXT))
 
 
+def _render_confirm_text(user, prompt: str, is_edit: bool = False) -> str:
+    """Render confirmation text with current size, quality, and prompt."""
+    quality = user.image_quality or "low"
+    size_key = user.image_size or DEFAULT_IMAGE_SIZE
+    quality_label = texts.QUALITY_LABELS.get(quality, quality)
+    size_label_text = size_label(size_key)
+    title = texts.CONFIRM_EDIT_TITLE if is_edit else texts.CONFIRM_GENERATE_TITLE
+    warning = ""
+    if quality != "low":
+        warning = f"\n\n{texts.QUALITY_NOT_LOW_WARNING}"
+    return (
+        f"{title}\n\n"
+        f"{texts.CONFIRM_PROMPT_LABEL} «{prompt[:texts.CONFIRM_PROMPT_MAX]}»\n\n"
+        f"{texts.CONFIRM_SIZE_LABEL} {size_label_text}\n"
+        f"{texts.CONFIRM_QUALITY_LABEL} {quality_label}"
+        f"{warning}"
+    )
+
+
 @router.message(F.text, ~F.text.startswith("/"), ~F.reply_to_message)
 async def handle_generate(message: Message, session):
     if message.text in MENU_BUTTONS:
@@ -62,8 +85,8 @@ async def handle_generate(message: Message, session):
 
     await set_pending_prompt(session, user, message.text)
     await message.answer(
-        badge(texts.SIZE_TITLE),
-        reply_markup=size_keyboard(user.image_size or DEFAULT_IMAGE_SIZE, show_back=False),
+        badge(_render_confirm_text(user, message.text, is_edit=False)),
+        reply_markup=confirm_keyboard(),
     )
 
 
@@ -75,6 +98,113 @@ async def confirm_no(callback: CallbackQuery, session):
     except Exception:
         pass
     await callback.answer()
+
+
+@router.callback_query(F.data == "gen_edit_size")
+async def gen_edit_size(callback: CallbackQuery, session):
+    try:
+        user = await get_or_create_user(session, callback.from_user.id)
+        await callback.message.edit_text(
+            badge("اندازه مورد نظر رو انتخاب کن:"),
+            reply_markup=confirm_size_keyboard(user.image_size or DEFAULT_IMAGE_SIZE),
+        )
+        await callback.answer()
+    except Exception as e:
+        logging.getLogger(__name__).exception("gen_edit_size failed: %s", e)
+        try:
+            await callback.answer("⚠️ خطایی رخ داد. لطفاً دوباره تلاش کنید.", show_alert=True)
+        except Exception:
+            pass
+
+
+@router.callback_query(F.data == "gen_edit_quality")
+async def gen_edit_quality(callback: CallbackQuery, session):
+    try:
+        user = await get_or_create_user(session, callback.from_user.id)
+        await callback.message.edit_text(
+            badge("کیفیت مورد نظر رو انتخاب کن:"),
+            reply_markup=confirm_quality_keyboard(user.tier, user.image_quality or "low"),
+        )
+        await callback.answer()
+    except Exception as e:
+        logging.getLogger(__name__).exception("gen_edit_quality failed: %s", e)
+        try:
+            await callback.answer("⚠️ خطایی رخ داد. لطفاً دوباره تلاش کنید.", show_alert=True)
+        except Exception:
+            pass
+
+
+@router.callback_query(F.data.startswith("gen_confirm_size:"))
+async def gen_confirm_size(callback: CallbackQuery, session):
+    try:
+        value = callback.data.split(":", 1)[1]
+        from bot.services.models import VALID_IMAGE_SIZES
+        if value not in VALID_IMAGE_SIZES:
+            await callback.answer("⚠️ گزینه نامعتبر.", show_alert=True)
+            return
+
+        user = await get_or_create_user(session, callback.from_user.id)
+        from bot.services.user import set_size
+        await set_size(session, user, value)
+        user.image_size = value
+        await callback.message.edit_text(
+            badge(_render_confirm_text(user, user.pending_prompt or "", is_edit=False)),
+            reply_markup=confirm_keyboard(),
+        )
+        await callback.answer()
+    except Exception as e:
+        logging.getLogger(__name__).exception("gen_confirm_size failed: %s", e)
+        try:
+            await callback.answer("⚠️ خطایی رخ داد. لطفاً دوباره تلاش کنید.", show_alert=True)
+        except Exception:
+            pass
+
+
+@router.callback_query(F.data.startswith("gen_confirm_quality:"))
+async def gen_confirm_quality(callback: CallbackQuery, session):
+    try:
+        value = callback.data.split(":", 1)[1]
+        from bot.services.user import VALID_QUALITIES
+        if value not in VALID_QUALITIES:
+            await callback.answer("⚠️ گزینه نامعتبر.", show_alert=True)
+            return
+
+        user = await get_or_create_user(session, callback.from_user.id)
+        if user.tier == "free" and value != "low":
+            await callback.answer(texts.QUALITY_LOCKED, show_alert=True)
+            return
+
+        from bot.services.user import set_quality
+        await set_quality(session, user, value)
+        user.image_quality = value
+        await callback.message.edit_text(
+            badge(_render_confirm_text(user, user.pending_prompt or "", is_edit=False)),
+            reply_markup=confirm_keyboard(),
+        )
+        await callback.answer()
+    except Exception as e:
+        logging.getLogger(__name__).exception("gen_confirm_quality failed: %s", e)
+        try:
+            await callback.answer("⚠️ خطایی رخ داد. لطفاً دوباره تلاش کنید.", show_alert=True)
+        except Exception:
+            pass
+
+
+@router.callback_query(F.data == "gen_back_to_confirm")
+async def gen_back_to_confirm(callback: CallbackQuery, session):
+    try:
+        user = await get_or_create_user(session, callback.from_user.id)
+        await callback.message.edit_text(
+            badge(_render_confirm_text(user, user.pending_prompt or "", is_edit=False)),
+            reply_markup=confirm_keyboard(),
+        )
+        await callback.answer()
+    except Exception as e:
+        logging.getLogger(__name__).exception("gen_back_to_confirm failed: %s", e)
+        try:
+            await callback.answer("⚠️ خطایی رخ داد. لطفاً دوباره تلاش کنید.", show_alert=True)
+        except Exception:
+            pass
 
 
 @router.callback_query(F.data == "confirm_yes")

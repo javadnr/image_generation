@@ -95,6 +95,18 @@ CONFIRM_PROGRESS = "⏳ در حال ساخت تصویر با پرامپت شما
 CONFIRM_EMPTY = "⚠️ پرامپت فعالی وجود ندارد. لطفاً یک پرامپت جدید بفرستید."
 CONFIRM_BUSY = "⏳ لطفاً صبر کنید. تصویر قبلی در حال ساخت است."
 CONFIRM_PROMPT_MAX = 300
+
+# Confirmation text template (used for both generate and edit)
+CONFIRM_GENERATE_TITLE = "🖼 تصویر با این پرامپت ساخته شود؟"
+CONFIRM_EDIT_TITLE = "🖼 عکس با این تغییرات ویرایش شود؟"
+CONFIRM_SIZE_LABEL = "📐 اندازه:"
+CONFIRM_QUALITY_LABEL = "🎨 کیفیت:"
+CONFIRM_PROMPT_LABEL = "📝 پرامپت:"
+QUALITY_NOT_LOW_WARNING = "⚠️ انتخاب کیفیت غیر از پایین ممکن است از اعتبار شما بیشتر بکاهد، دقت کنید"
+
+# Inline edit buttons
+BTN_EDIT_SIZE = "📐 تغییر اندازه"
+BTN_EDIT_QUALITY = "🎨 تغییر کیفیت"
 GENERATE_SETTINGS_NOTE = "💡 کیفیت و اندازه رو می‌تونی از دکمه «{button}» در منوی اصلی عوض کنی."
 
 # Premium
@@ -109,6 +121,8 @@ BALANCE_TITLE = "📊 موجودی شما\n\nremain از total تصویر در �
 # Edit
 EDIT_PREMIUM_ONLY = "⚠️ ویرایش تصویر فقط برای کاربران پریمیوم فعال است.\nبرای استفاده از این قابلیت، اشتراک تهیه کنید 👇"
 EDIT_NEED_CAPTION = "برای ویرایش تصویر، لطفاً عکس رو با کپشن (توضیح تغییر موردنظرت) بفرست."
+CONFIRM_EDIT_ASK = "🖼 عکس با این تغییرات ویرایش شود؟"
+EDIT_COUNT_NOTE = "تعداد ویرایش تصویر به کیفیت انتخابی بستگی دارد"
 
 # Force join
 FORCE_JOIN_TITLE = "⚠️ برای استفاده از ربات ابتدا در کانال‌های زیر عضو شوید:"

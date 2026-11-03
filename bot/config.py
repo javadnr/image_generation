@@ -5,7 +5,8 @@ from pydantic import validator
 
 class Settings(BaseSettings):
     BOT_TOKEN: str
-    OPENAI_API_KEY: str
+    OPENAI_API_KEY: str = ""
+    AVALAI_API_KEY: str = ""
     OPENAI_BASE_URL: str = ""
     ADMIN_IDS: list[int] = []
     DB_PASSWORD: str = "changeme"

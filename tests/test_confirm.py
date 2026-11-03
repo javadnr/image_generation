@@ -161,7 +161,7 @@ def test_confirm_keyboard_and_texts():
 
     kb = confirm_keyboard()
     buttons = [b for row in kb.inline_keyboard for b in row]
-    assert [b.callback_data for b in buttons] == ["confirm_yes", "confirm_no"]
+    assert [b.callback_data for b in buttons] == ["gen_edit_size", "gen_edit_quality", "confirm_yes", "confirm_no"]
     assert all(b.text for b in buttons)
     assert texts.CONFIRM_ASK and texts.CONFIRM_PROGRESS
     assert texts.CONFIRM_EMPTY and texts.CONFIRM_BUSY
@@ -175,6 +175,6 @@ def test_revision_chain_valid():
     cfg = Config("alembic.ini")
     cfg.set_main_option("script_location", "alembic")
     script = ScriptDirectory.from_config(cfg)
-    assert script.get_heads() == ["0006_source_widen"]
-    rev = script.get_revision("0006_source_widen")
-    assert rev.down_revision == "0005_user_source"
+    assert script.get_heads() == ["0008_user_plan_snapshot"]
+    rev = script.get_revision("0008_user_plan_snapshot")
+    assert rev.down_revision == "0007_tx_paylink"

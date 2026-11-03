@@ -1,8 +1,7 @@
 from aiogram import Router, F
 from aiogram.types import Message
 from bot.services.user import get_or_create_user, can_generate
-from bot.services.models import default_model, images_per_quality, edits_available
-from bot.services.user import get_edit_cost
+from bot.services.models import default_model, images_per_quality
 from bot.keyboards.reply import main_menu
 from bot.keyboards.inline import plans_button
 from bot.texts import badge
@@ -30,9 +29,7 @@ async def balance(message: Message, session):
         f"• {texts.QUALITY_LABELS[q]}: {count:,} تصویر"
         for q, count in images_per_quality(balance_credits, model).items()
     ]
-    lines.append(
-        f"• ویرایش عکس: {edits_available(balance_credits, get_edit_cost(user)):,} تصویر"
-    )
+    lines.append(f"• {texts.EDIT_COUNT_NOTE}")
     text = texts.QUOTA_REMAINING_TOKENS.format(
         tier=tier_name,
         model=model,

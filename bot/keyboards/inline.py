@@ -101,10 +101,81 @@ def model_keyboard(tier: str, current: str) -> InlineKeyboardMarkup:
 
 
 def confirm_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text=texts.CONFIRM_YES, callback_data="confirm_yes"),
-        InlineKeyboardButton(text=texts.CONFIRM_NO, callback_data="confirm_no"),
-    ]])
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text=texts.BTN_EDIT_SIZE, callback_data="gen_edit_size"),
+            InlineKeyboardButton(text=texts.BTN_EDIT_QUALITY, callback_data="gen_edit_quality"),
+        ],
+        [
+            InlineKeyboardButton(text=texts.CONFIRM_YES, callback_data="confirm_yes"),
+            InlineKeyboardButton(text=texts.CONFIRM_NO, callback_data="confirm_no"),
+        ],
+    ])
+
+
+def confirm_edit_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text=texts.BTN_EDIT_SIZE, callback_data="edt_edit_size"),
+            InlineKeyboardButton(text=texts.BTN_EDIT_QUALITY, callback_data="edt_edit_quality"),
+        ],
+        [
+            InlineKeyboardButton(text=texts.CONFIRM_YES, callback_data="confirm_yes_edit"),
+            InlineKeyboardButton(text=texts.CONFIRM_NO, callback_data="confirm_no_edit"),
+        ],
+    ])
+
+
+def confirm_size_keyboard(current: str) -> InlineKeyboardMarkup:
+    from bot.services.models import IMAGE_SIZES
+    buttons = []
+    for value in IMAGE_SIZES:
+        label = IMAGE_SIZES[value]["label"]
+        tick = "✅ " if value == current else ""
+        buttons.append([InlineKeyboardButton(text=f"{tick}{label}", callback_data=f"gen_confirm_size:{value}")])
+    buttons.append([InlineKeyboardButton(text=texts.BTN_EDIT_QUALITY, callback_data="gen_edit_quality")])
+    buttons.append([InlineKeyboardButton(text="⬅️ بازگشت به تایید", callback_data="gen_back_to_confirm")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def confirm_quality_keyboard(tier: str, current: str) -> InlineKeyboardMarkup:
+    buttons = []
+    for value, label in QUALITY_OPTIONS:
+        if tier == "free" and value != "low":
+            text = f"🔒 {label}"
+        else:
+            tick = "✅ " if value == current else ""
+            text = f"{tick}{label}"
+        buttons.append([InlineKeyboardButton(text=text, callback_data=f"gen_confirm_quality:{value}")])
+    buttons.append([InlineKeyboardButton(text=texts.BTN_EDIT_SIZE, callback_data="gen_edit_size")])
+    buttons.append([InlineKeyboardButton(text="⬅️ بازگشت به تایید", callback_data="gen_back_to_confirm")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def edit_confirm_size_keyboard(current: str) -> InlineKeyboardMarkup:
+    from bot.services.models import IMAGE_SIZES
+    buttons = []
+    for value in IMAGE_SIZES:
+        label = IMAGE_SIZES[value]["label"]
+        tick = "✅ " if value == current else ""
+        buttons.append([InlineKeyboardButton(text=f"{tick}{label}", callback_data=f"edt_confirm_size:{value}")])
+    buttons.append([InlineKeyboardButton(text=texts.BTN_EDIT_QUALITY, callback_data="edt_edit_quality")])
+    buttons.append([InlineKeyboardButton(text="⬅️ بازگشت به تایید", callback_data="edt_back_to_confirm")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def edit_confirm_quality_keyboard(tier: str, current: str) -> InlineKeyboardMarkup:
+    buttons = []
+    for value, label in QUALITY_OPTIONS:
+        if tier == "free" and value != "low":
+            text = f"🔒 {label}"
+        else:
+            tick = "✅ " if value == current else ""
+            text = f"{tick}{label}"
+        buttons.append([InlineKeyboardButton(text=text, callback_data=f"edt_confirm_quality:{value}")])
+    buttons.append([InlineKeyboardButton(text=texts.BTN_EDIT_SIZE, callback_data="edt_edit_size")])
+    buttons.append([InlineKeyboardButton(text="⬅️ بازگشت به تایید", callback_data="edt_back_to_confirm")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 def admin_status(bot_enabled: bool) -> InlineKeyboardMarkup:
