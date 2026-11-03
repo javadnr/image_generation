@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     ALLOW_FREE: bool = True
     PROFIT_PERCENTAGE: float = 0.0
     IMAGE_EDIT_COST_TOKENS: int = 4000
+    LOW_EDIT: int = 0
+    MEDIUM_EDIT: int = 0
+    HIGH_EDIT: int = 0
     BRONZE_MAX_TOKEN: int = 10000
     SILVER_MAX_TOKEN: int = 25000
     GOLD_MAX_TOKEN: int = 60000

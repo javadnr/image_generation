@@ -115,6 +115,13 @@ async def confirm_yes_edit(callback: CallbackQuery, session):
         await answer_quota_exceeded(callback.message, session, user)
         return
 
+    quality = user.image_quality or "low"
+    from bot.services.user import has_edit_quality_balance, edit_quality_min_balance
+    if not has_edit_quality_balance(user, quality):
+        threshold = edit_quality_min_balance(quality)
+        await callback.answer(f"⚠️ برای ویرایش با کیفیت {texts.QUALITY_LABELS.get(quality, quality)} حداقل {threshold:,} اعتبار لازم است.", show_alert=True)
+        return
+
     if user.is_generating:
         await callback.answer(texts.CONFIRM_BUSY, show_alert=True)
         return
@@ -333,7 +340,12 @@ async def edt_confirm_quality(callback: CallbackQuery, session):
             await callback.answer(texts.QUALITY_LOCKED, show_alert=True)
             return
 
-        from bot.services.user import set_quality
+        from bot.services.user import set_quality, has_edit_quality_balance, edit_quality_min_balance
+        if not has_edit_quality_balance(user, value):
+            threshold = edit_quality_min_balance(value)
+            await callback.answer(f"⚠️ برای ویرایش با کیفیت {texts.QUALITY_LABELS.get(value, value)} حداقل {threshold:,} اعتبار لازم است.", show_alert=True)
+            return
+
         await set_quality(session, user, value)
         user.image_quality = value
 

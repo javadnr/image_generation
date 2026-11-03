@@ -200,6 +200,26 @@ def has_edit_balance(user: User) -> bool:
     return (user.token_balance or 0) >= get_edit_cost(user)
 
 
+def edit_quality_min_balance(quality: str) -> int:
+    """Minimum credit threshold to start an edit at the given quality."""
+    q = (quality or "low").lower()
+    if q == "high":
+        return settings.HIGH_EDIT or 0
+    if q == "medium":
+        return settings.MEDIUM_EDIT or 0
+    return settings.LOW_EDIT or 0
+
+
+def has_edit_quality_balance(user: User, quality: str) -> bool:
+    """Whether user has enough credit to start an edit at the given quality."""
+    if user.tier == "free":
+        return False
+    threshold = edit_quality_min_balance(quality)
+    if threshold <= 0:
+        return True
+    return (user.token_balance or 0) >= threshold
+
+
 async def set_tier(session: AsyncSession, telegram_id: int, tier: str) -> User | None:
     from bot.services.models import plan_allowance, plan_snapshot
     result = await session.execute(select(User).where(User.telegram_id == telegram_id))
