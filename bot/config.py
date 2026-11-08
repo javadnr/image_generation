@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     PAYMENT_REPORT_CHANNEL_ID: int | None = None
     BACKUP_ENABLED: bool = True
     BACKUP_TELEGRAM_CHANNEL_ID: int | None = None
+    AVALAI_CREDIT_URL: str = "https://api.avalai.ir/user/v1/credit"
 
     @validator("ADMIN_IDS", pre=True)
     def parse_admin_ids(cls, v):

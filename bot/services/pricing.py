@@ -27,6 +27,8 @@ logger = logging.getLogger(__name__)
 FX_URL = "https://api.tetherland.com/currencies"
 FX_TTL_SECONDS = 300
 
+AVALAI_CREDIT_URL = "https://api.avalai.ir/user/v1/credit"
+
 _cache: dict = {"rate": None, "at": 0.0}
 _lock = asyncio.Lock()
 
@@ -52,25 +54,55 @@ def last_known_rate() -> float | None:
     return _cache["rate"]
 
 
+async def _fetch_tetherland_rate(client: httpx.AsyncClient) -> float | None:
+    """Fetch USDT/Toman rate from Tetherland."""
+    resp = await client.get(FX_URL)
+    resp.raise_for_status()
+    data = resp.json()
+    rate = float(data["data"]["currencies"]["USDT"]["price"])
+    if rate <= 0:
+        raise ValueError(f"Invalid Tetherland rate: {rate}")
+    return rate
+
+
+async def _fetch_avalai_rate(client: httpx.AsyncClient) -> float | None:
+    """Fallback: fetch exchange_rate from Avalai credit API."""
+    from bot.config import settings
+
+    resp = await client.get(settings.AVALAI_CREDIT_URL)
+    resp.raise_for_status()
+    data = resp.json()
+    rate = float(data["exchange_rate"])
+    if rate <= 0:
+        raise ValueError(f"Invalid Avalai exchange_rate: {rate}")
+    return rate
+
+
 async def refresh_fx_rate(force: bool = False) -> float | None:
-    """Fetch the USDT/Toman rate unless the cache is fresh (unless forced)."""
+    """Fetch the USDT/Toman rate unless the cache is fresh (unless forced).
+
+    Tetherland is the primary source. If it fails, fall back to the Avalai
+    credit API's exchange_rate so pricing keeps working.
+    """
     async with _lock:
         if not force and cached_rate() is not None:
             return _cache["rate"]
+        rate: float | None = None
         try:
-            # Generous timeout: this route can take 20s+ on slow networks.
+            # Generous timeout: these routes can take 20s+ on slow networks.
             async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
-                resp = await client.get(FX_URL)
-                resp.raise_for_status()
-                data = resp.json()
-            rate = float(data["data"]["currencies"]["USDT"]["price"])
-            if rate <= 0:
-                raise ValueError(f"Invalid rate: {rate}")
+                try:
+                    rate = await _fetch_tetherland_rate(client)
+                    logger.info("FX rate refreshed from Tetherland: 1 USDT = %s Toman", rate)
+                except Exception as tether_err:
+                    logger.warning("Tetherland rate fetch failed: %s; trying Avalai fallback", tether_err)
+                    rate = await _fetch_avalai_rate(client)
+                    logger.info("FX rate refreshed from Avalai fallback: 1 USDT = %s Toman", rate)
+        except Exception:
+            logger.exception("FX rate refresh failed from all sources; keeping previous value")
+        if rate is not None and rate > 0:
             _cache["rate"] = rate
             _cache["at"] = time.monotonic()
-            logger.info("FX rate refreshed: 1 USDT = %s Toman", rate)
-        except Exception:
-            logger.exception("FX rate refresh failed; keeping previous value")
         return _cache["rate"]
 
 
