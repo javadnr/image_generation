@@ -69,7 +69,8 @@ async def _fetch_avalai_rate(client: httpx.AsyncClient) -> float | None:
     """Fallback: fetch exchange_rate from Avalai credit API."""
     from bot.config import settings
 
-    resp = await client.get(settings.AVALAI_CREDIT_URL)
+    headers = {"Authorization": f"Bearer {settings.AVALAI_API_KEY}"}
+    resp = await client.get(settings.AVALAI_CREDIT_URL, headers=headers)
     resp.raise_for_status()
     data = resp.json()
     rate = float(data["exchange_rate"])
