@@ -93,18 +93,19 @@ def test_quality_breakdown_math(catalog, monkeypatch):
     from bot.handlers import premium as premium_h
     monkeypatch.setattr(settings, "IMAGE_EDIT_COST_TOKENS", 4000)
 
-    # 20% profit: bronze 41/18/4 + 2 edits, silver 104/46/11 + 6, gold 250/112/28 + 15
-    assert premium_h._quality_breakdown(10000) == "41 پایین | 18 متوسط | 4 بالا | 2 ویرایش"
-    assert premium_h._quality_breakdown(25000) == "104 پایین | 46 متوسط | 11 بالا | 6 ویرایش"
-    assert premium_h._quality_breakdown(60000) == "250 پایین | 112 متوسط | 28 بالا | 15 ویرایش"
+    # 20% profit: bronze 41, silver 104, gold 250 (standard/low quality only)
+    assert premium_h._standard_quality_count(10000) == 41
+    assert premium_h._standard_quality_count(25000) == 104
+    assert premium_h._standard_quality_count(60000) == 250
 
 
 def test_quality_breakdown_text_lists_all_plans(catalog):
     from bot.handlers import premium as premium_h
 
     text = premium_h._quality_breakdown_text()
-    assert "🥉" in text and "🥈" in text and "🥇" in text
-    assert "41 پایین" in text
+    assert "🥉" in text and "🥈" in text and "🥇" in text and "💎" in text
+    assert "استاندارد" in text
+    assert "41 تصویر (کیفیت استاندارد)" in text
 
 
 def test_fx_note_shows_cached_rate(catalog):
@@ -145,9 +146,8 @@ def test_plan_breakdown_includes_edits(catalog, monkeypatch):
     monkeypatch.setattr(settings, "IMAGE_EDIT_COST_TOKENS", 4000)
 
     text = premium_h._quality_breakdown_text()
-    assert "2 ویرایش" in text
-    assert "6 ویرایش" in text
-    assert "15 ویرایش" in text
+    # Edits no longer appear in plan breakdown text
+    assert "ویرایش" not in text
 
 
 def test_quality_estimates_text(catalog):
@@ -156,14 +156,13 @@ def test_quality_estimates_text(catalog):
 
     user = SimpleNamespace(token_balance=20000, image_model="gpt-image-2.5-flare")
     text = quality_h._estimates_text(user)
-    # 20000 @ 240/532/2112 (20% profit on 200/443/1760)
+    # 20000 @ 240 (20% profit on 200) → 83 standard-quality images
     assert "83" in text
-    assert "37" in text
-    assert "9" in text
+    assert "استاندارد" in text
 
     broke = SimpleNamespace(token_balance=0, image_model="gpt-image-2.5-flare")
     zero_text = quality_h._estimates_text(broke)
-    assert "0 تصویر" in zero_text
+    assert "0 تصویر" in zero_text or zero_text == ""
 
 
 def test_settings_summary_text(catalog):
@@ -180,7 +179,8 @@ def test_settings_summary_text(catalog):
     text = quality_h._settings_summary_text(user)
     assert "متوسط" in text
     assert "Portrait (3:4)" in text
-    assert "83" in text and "37" in text and "9" in text
+    assert "83" in text
+    assert "استاندارد" in text
 
 
 def test_settings_summary_text_defaults(catalog):
@@ -192,7 +192,7 @@ def test_settings_summary_text_defaults(catalog):
         image_size=None, tier="free",
     )
     text = quality_h._settings_summary_text(user)
-    assert "پایین" in text
+    assert "استاندارد" in text
     assert "Square (1:1)" in text
 
 
@@ -227,10 +227,11 @@ def test_balance_template_renders_breakdown():
         tier="برنزی",
         model="gpt-image-2.5-flare",
         balance="20,000",
-        breakdown="• پایین: 100 تصویر\n• متوسط: 45 تصویر",
+        standard_count="100",
     )
     assert "20,000" in rendered
-    assert "100 تصویر" in rendered
+    assert "100" in rendered
+    assert "استاندارد" in rendered
     assert "توکن" not in rendered
     assert "token" not in rendered.lower()
     assert len(rendered) < 4096

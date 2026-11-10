@@ -257,17 +257,14 @@ async def activate_cmd(message: Message, session):
 
     expire = jalali_date(user.premium_expire_date)
     model = user.image_model or default_model()
-    breakdown = "\n".join(
-        f"• {texts.QUALITY_LABELS[q]}: {count:,} تصویر"
-        for q, count in images_per_quality(user.token_balance or 0, model).items()
-    ) or "—"
+    std_count = images_per_quality(user.token_balance or 0, model).get("low", 0)
     try:
         await message.bot.send_message(
             user_id,
             badge(
                 f"✅ اشتراک {texts.TIER_NAMES_FA[tier]} برای شما فعال شد!\n\n"
                 f"💰 اعتبار: {user.token_balance:,}\n"
-                f"🖼 تعداد تقریبی تصاویر:\n{breakdown}\n"
+                f"🖼 تعداد تقریبی تصاویر (کیفیت استاندارد): {std_count:,} تصویر\n"
                 f"📅 پایان اشتراک: {expire}"
             ),
             reply_markup=main_menu(user),

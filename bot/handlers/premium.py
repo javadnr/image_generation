@@ -39,17 +39,13 @@ def tooman_display(price: int | None) -> str:
     return f"{thousands} هزار تومان"
 
 
-QUALITY_FA = {"low": "پایین", "medium": "متوسط", "high": "بالا"}
+QUALITY_FA = {"low": "استاندارد", "medium": "متوسط", "high": "بالا"}
 
 
-def _quality_breakdown(allowance: int) -> str | None:
-    """Per-quality approximate image counts, profit-adjusted."""
+def _standard_quality_count(allowance: int) -> int:
+    """Approximate image count at standard (low) quality, profit-adjusted."""
     per_quality = images_per_quality(allowance, default_model())
-    parts = [
-        f"{count:,} {QUALITY_FA[quality]}"
-        for quality, count in per_quality.items()
-    ]
-    return " | ".join(parts) if parts else None
+    return per_quality.get("low", 0)
 
 
 def _fx_note() -> str | None:
@@ -65,12 +61,12 @@ def _fx_note() -> str | None:
 def _quality_breakdown_text() -> str:
     lines = []
     for plan in PLANS:
-        breakdown = _quality_breakdown(plan_allowance(plan))
-        if breakdown:
-            lines.append(f"{texts.PLAN_EMOJI[plan]} {breakdown}")
+        count = _standard_quality_count(plan_allowance(plan))
+        if count:
+            lines.append(f"{texts.PLAN_EMOJI[plan]} {count:,} تصویر (کیفیت استاندارد)")
     if not lines:
         return ""
-    return "📊 تعداد تقریبی تصاویر هر پلن بر اساس کیفیت:\n" + "\n".join(lines) + "\n"
+    return "📊 تعداد تقریبی تصاویر هر پلن (کیفیت استاندارد):\n" + "\n".join(lines) + "\n"
 
 
 def _fx_note_text() -> str:
@@ -95,10 +91,12 @@ def _plan_block(tier: str, discounts: dict | None) -> str:
     tag = texts.PLAN_TAGS.get(tier, "")
     if tag:
         header += f" {tag}"
+    std_count = _standard_quality_count(plan_allowance(tier))
     return (
         f"{header}\n"
         f"📝 {texts.PLAN_DESCRIPTIONS.get(tier, '')}\n"
-        f"• {plan_allowance(tier):,} اعتبار"
+        f"• {plan_allowance(tier):,} اعتبار\n"
+        f"🖼 حدود {std_count:,} تصویر (کیفیت استاندارد)"
     )
 
 
@@ -107,16 +105,12 @@ def premium_text(user, discounts: dict | None = None) -> str:
         expire = jalali_date(user.premium_expire_date)
         remaining = (user.premium_expire_date.date() - datetime.now().date()).days
         model = user.image_model or default_model()
-        per_quality = images_per_quality(user.token_balance or 0, model)
-        breakdown = "\n".join(
-            f"• {texts.QUALITY_LABELS[q]}: {count:,} تصویر"
-            for q, count in per_quality.items()
-        ) or "—"
+        std_count = images_per_quality(user.token_balance or 0, model).get("low", 0)
         return badge(
             f"{texts.PREMIUM_TITLE}\n\n"
             f"🤖 مدل: {model}\n"
             f"💰 اعتبار باقی‌مانده: {user.token_balance:,}\n"
-            f"🖼 تعداد تقریبی تصاویر باقی‌مانده:\n{breakdown}\n"
+            f"🖼 تعداد تقریبی تصاویر باقی‌مانده (کیفیت استاندارد): {std_count:,} تصویر\n"
             f"📅 تاریخ پایان: {expire}\n"
             f"⏳ روزهای باقی‌مانده: {remaining}"
         )

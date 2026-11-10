@@ -61,13 +61,16 @@ PLAN_DEACTIVATED_LOW_BALANCE = (
     "💎 برای ادامه، از دکمه «خرید اشتراک» یک اشتراک جدید تهیه کنید."
 )
 INSUFFICIENT_BALANCE = "⚠️ موجودی شما برای ساخت تصویر با این کیفیت کافی نیست.\nبرای ادامه اشتراک تهیه کنید 👇"
-QUOTA_REMAINING_TOKENS = "📊 موجودی شما\n\n📦 پلن: {tier}\n🤖 مدل: {model}\n💰 اعتبار باقی‌مانده: {balance}\n🖼 تعداد تقریبی تصاویر باقی‌مانده:\n{breakdown}\n💡 تعداد واقعی ممکن است متفاوت باشد."
+QUOTA_REMAINING_TOKENS = "📊 موجودی شما\n\n📦 پلن: {tier}\n🤖 مدل: {model}\n💰 اعتبار باقی‌مانده: {balance}\n🖼 تعداد تقریبی تصاویر باقی‌مانده (کیفیت استاندارد): {standard_count} تصویر\n💡 تعداد واقعی ممکن است متفاوت باشد."
 
 # Quality
 QUALITY_TITLE = "کیفیت تصویر خروجی بعدی رو انتخاب کن:"
-QUALITY_LABELS = {"low": "پایین", "medium": "متوسط", "high": "بالا"}
+QUALITY_LABELS = {"low": "استاندارد", "medium": "متوسط", "high": "بالا"}
 QUALITY_SET = "✅ کیفیت تصویر روی {label} تنظیم شد."
 QUALITY_LOCKED = "🔒 این کیفیت مخصوص کاربران پریمیوم است."
+
+# Credit consumption notice shown when Medium or High quality is selected.
+QUALITY_CREDIT_NOTE = "⚠️ کیفیت‌های متوسط و بالا به ازای هر تصویر بیشتر از کیفیت استاندارد اعتبار مصرف می‌کنند. لطفاً هنگام انتخاب کیفیت به این مورد دقت کنید."
 
 # Image settings
 SETTINGS_TITLE = "⚙️ تنظیمات تصویر"

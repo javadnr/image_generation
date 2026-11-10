@@ -25,16 +25,12 @@ async def balance(message: Message, session):
 
     balance_credits = user.token_balance or 0
     model = user.image_model or default_model()
-    lines = [
-        f"• {texts.QUALITY_LABELS[q]}: {count:,} تصویر"
-        for q, count in images_per_quality(balance_credits, model).items()
-    ]
-    lines.append(f"• {texts.EDIT_COUNT_NOTE}")
+    std_count = images_per_quality(balance_credits, model).get("low", 0)
     text = texts.QUOTA_REMAINING_TOKENS.format(
         tier=tier_name,
         model=model,
         balance=f"{balance_credits:,}",
-        breakdown="\n".join(lines),
+        standard_count=f"{std_count:,}",
     )
 
     if not await can_generate(session, user):

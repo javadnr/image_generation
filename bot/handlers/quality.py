@@ -23,21 +23,24 @@ def _current_size(user) -> str:
 
 
 def _estimates_text(user) -> str:
-    """Per-quality approximate image counts for the user's current balance."""
+    """Standard-quality approximate image count for the user's current balance."""
     model = user.image_model or default_model()
-    per_quality = images_per_quality(user.token_balance or 0, model)
-    if not per_quality:
+    std_count = images_per_quality(user.token_balance or 0, model).get("low", 0)
+    if not std_count:
         return ""
-    lines = "\n".join(
-        f"• {texts.QUALITY_LABELS[q]}: حدود {count:,} تصویر"
-        for q, count in per_quality.items()
-    )
-    return f"\n\n📊 با موجودی فعلی تقریباً می‌تونی بسازی:\n{lines}"
+    return f"\n\n📊 با موجودی فعلی تقریباً می‌تونی {std_count:,} تصویر با کیفیت استاندارد بسازی."
+
+def _credit_notice(quality: str) -> str:
+    """Credit consumption notice for Medium/High quality selection."""
+    if quality in ("medium", "high"):
+        return f"\n\n{texts.QUALITY_CREDIT_NOTE}"
+    return ""
 
 
 def _quality_menu_text(user) -> str:
     return (
-        f"{texts.QUALITY_TITLE}{_estimates_text(user)}\n\n"
+        f"{texts.QUALITY_TITLE}{_estimates_text(user)}"
+        f"{_credit_notice(_current_quality(user))}\n\n"
         f"کیفیت فعلی: {texts.QUALITY_LABELS.get(_current_quality(user), _current_quality(user))}"
     )
 
@@ -127,8 +130,10 @@ async def quality_set(callback: CallbackQuery, session):
         )
     except Exception:
         pass
+    notice = _credit_notice(value)
     await callback.answer(
-        texts.QUALITY_SET.format(label=texts.QUALITY_LABELS[value])
+        texts.QUALITY_SET.format(label=texts.QUALITY_LABELS[value]) + notice,
+        show_alert=bool(notice)
     )
 
 
