@@ -63,10 +63,10 @@ def _quality_breakdown_text() -> str:
     for plan in PLANS:
         count = _standard_quality_count(plan_allowance(plan))
         if count:
-            lines.append(f"{texts.PLAN_EMOJI[plan]} {count:,} تصویر (کیفیت استاندارد)")
+            lines.append(f"{texts.PLAN_EMOJI[plan]} {count:,} تصویر")
     if not lines:
         return ""
-    return "📊 تعداد تقریبی تصاویر هر پلن (کیفیت استاندارد):\n" + "\n".join(lines) + "\n"
+    return "📊 تعداد تقریبی تصاویر هر پلن:\n" + "\n".join(lines) + "\n"
 
 
 def _fx_note_text() -> str:
@@ -96,7 +96,7 @@ def _plan_block(tier: str, discounts: dict | None) -> str:
         f"{header}\n"
         f"📝 {texts.PLAN_DESCRIPTIONS.get(tier, '')}\n"
         f"• {plan_allowance(tier):,} اعتبار\n"
-        f"🖼 حدود {std_count:,} تصویر (کیفیت استاندارد)"
+        f"🖼 حدود {std_count:,} تصویر"
     )
 
 
@@ -110,7 +110,7 @@ def premium_text(user, discounts: dict | None = None) -> str:
             f"{texts.PREMIUM_TITLE}\n\n"
             f"🤖 مدل: {model}\n"
             f"💰 اعتبار باقی‌مانده: {user.token_balance:,}\n"
-            f"🖼 تعداد تقریبی تصاویر باقی‌مانده (کیفیت استاندارد): {std_count:,} تصویر\n"
+            f"🖼 تعداد تقریبی تصاویر باقی‌مانده: {std_count:,} تصویر\n"
             f"📅 تاریخ پایان: {expire}\n"
             f"⏳ روزهای باقی‌مانده: {remaining}"
         )

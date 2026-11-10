@@ -104,8 +104,7 @@ def test_quality_breakdown_text_lists_all_plans(catalog):
 
     text = premium_h._quality_breakdown_text()
     assert "🥉" in text and "🥈" in text and "🥇" in text and "💎" in text
-    assert "استاندارد" in text
-    assert "41 تصویر (کیفیت استاندارد)" in text
+    assert "41 تصویر" in text
 
 
 def test_fx_note_shows_cached_rate(catalog):
