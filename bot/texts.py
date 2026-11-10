@@ -97,7 +97,7 @@ CONFIRM_EDIT_TITLE = "🖼 عکس با این تغییرات ویرایش شود
 CONFIRM_SIZE_LABEL = "📐 اندازه:"
 CONFIRM_QUALITY_LABEL = "🎨 کیفیت:"
 CONFIRM_PROMPT_LABEL = "📝 پرامپت:"
-QUALITY_NOT_LOW_WARNING = "⚠️ انتخاب کیفیت غیر از پایین ممکن است از اعتبار شما بیشتر بکاهد، دقت کنید"
+QUALITY_NOT_LOW_WARNING = "⚠️ انتخاب کیفیت غیر از استاندارد ممکن است از اعتبار شما بیشتر بکاهد، دقت کنید"
 
 # Inline edit buttons
 BTN_EDIT_SIZE = "📐 تغییر اندازه"
