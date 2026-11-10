@@ -42,7 +42,7 @@ def tooman_display(price: int | None) -> str:
     return f"{thousands} هزار تومان"
 
 
-QUALITY_FA = {"low": "استاندارد", "medium": "متوسط", "high": "بالا"}
+QUALITY_FA = {"low": "استاندارد", "medium": "بالا", "high": "عالی"}
 
 
 def _standard_quality_count(allowance: int) -> int:

@@ -62,7 +62,7 @@ QUALITY_SET = "✅ کیفیت تصویر روی {label} تنظیم شد."
 QUALITY_LOCKED = "🔒 این کیفیت مخصوص کاربران پریمیوم است."
 
 # Credit consumption notice shown when Medium or High quality is selected.
-QUALITY_CREDIT_NOTE = "⚠️ کیفیت‌های متوسط و بالا به ازای هر تصویر بیشتر از کیفیت استاندارد اعتبار مصرف می‌کنند. لطفاً هنگام انتخاب کیفیت به این مورد دقت کنید."
+QUALITY_CREDIT_NOTE = "⚠️ کیفیت‌های بالا و عالی به ازای هر تصویر بیشتر از کیفیت استاندارد اعتبار مصرف می‌کنند. لطفاً هنگام انتخاب کیفیت به این مورد دقت کنید."
 
 # Image settings
 SETTINGS_TITLE = "⚙️ تنظیمات تصویر"
