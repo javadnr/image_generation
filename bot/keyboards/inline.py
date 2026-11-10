@@ -52,7 +52,7 @@ def plans_button() -> InlineKeyboardMarkup:
     ])
 
 
-QUALITY_OPTIONS = (("low", "استاندارد"), ("medium", "متوسط"), ("high", "بالا"))
+QUALITY_OPTIONS = (("low", "استاندارد"), ("medium", "بالا"), ("high", "عالی"))
 
 
 def quality_keyboard(tier: str, current: str, show_back: bool = False) -> InlineKeyboardMarkup:
