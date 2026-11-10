@@ -24,7 +24,6 @@ from bot.services.models import default_model
 
 logger = logging.getLogger(__name__)
 
-FX_URL = "https://api.tetherland.com/currencies"
 FX_TTL_SECONDS = 300
 
 AVALAI_CREDIT_URL = "https://api.avalai.ir/user/v1/credit"
@@ -56,7 +55,9 @@ def last_known_rate() -> float | None:
 
 async def _fetch_tetherland_rate(client: httpx.AsyncClient) -> float | None:
     """Fetch USDT/Toman rate from Tetherland."""
-    resp = await client.get(FX_URL)
+    from bot.config import settings
+
+    resp = await client.get(settings.TETHERLAND_URL)
     resp.raise_for_status()
     data = resp.json()
     rate = float(data["data"]["currencies"]["USDT"]["price"])
