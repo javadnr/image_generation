@@ -51,6 +51,7 @@ async def verify_join(callback: CallbackQuery, session):
             continue
 
     if all_joined:
+        await callback.message.delete()
         await callback.message.answer(
             badge(texts.WELCOME),
             reply_markup=main_menu(user),
