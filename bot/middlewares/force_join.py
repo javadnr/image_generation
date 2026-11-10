@@ -16,11 +16,13 @@ class ForceJoinMiddleware(BaseMiddleware):
         data: Dict[str, Any],
     ) -> Any:
         if not settings.REQUIRED_CHANNELS:
-            return await handler(event, data)
+            await handler(event, data)
+            return
 
         user_id = event.from_user.id
         if user_id in settings.ADMIN_IDS:
-            return await handler(event, data)
+            await handler(event, data)
+            return
 
         bot = data.get("bot")
         for channel_id in settings.REQUIRED_CHANNELS:
@@ -32,7 +34,7 @@ class ForceJoinMiddleware(BaseMiddleware):
             except Exception:
                 continue
 
-        return await handler(event, data)
+        await handler(event, data)
 
 
 class ForceJoinCallbackMiddleware(BaseMiddleware):
@@ -43,14 +45,17 @@ class ForceJoinCallbackMiddleware(BaseMiddleware):
         data: Dict[str, Any],
     ) -> Any:
         if not settings.REQUIRED_CHANNELS:
-            return await handler(event, data)
+            await handler(event, data)
+            return
 
         user_id = event.from_user.id
         if user_id in settings.ADMIN_IDS:
-            return await handler(event, data)
+            await handler(event, data)
+            return
 
         if event.data == "verify_join":
-            return await handler(event, data)
+            await handler(event, data)
+            return
 
         bot = data.get("bot")
         for channel_id in settings.REQUIRED_CHANNELS:
@@ -62,7 +67,7 @@ class ForceJoinCallbackMiddleware(BaseMiddleware):
             except Exception:
                 continue
 
-        return await handler(event, data)
+        await handler(event, data)
 
 
 class BotEnabledMiddleware(BaseMiddleware):
