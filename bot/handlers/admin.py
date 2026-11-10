@@ -194,11 +194,13 @@ async def set_premium_cmd(message: Message, session):
         await message.answer(badge(texts.ADMIN_USAGE))
         return
 
-    try:
-        user_id = int(parts[1])
-    except ValueError:
-        await message.answer(badge(texts.ADMIN_USAGE))
-        return
+    user_id = message.from_user.id if parts[1].lower() == "me" else None
+    if user_id is None:
+        try:
+            user_id = int(parts[1])
+        except ValueError:
+            await message.answer(badge(texts.ADMIN_USAGE))
+            return
 
     tier = parts[2].lower()
     if tier not in ("free", *PLANS):
@@ -232,8 +234,15 @@ async def activate_cmd(message: Message, session):
         await message.answer(badge(texts.ADMIN_INVALID_TIER))
         return
 
+    user_id = message.from_user.id if parts[2].lower() == "me" else None
+    if user_id is None:
+        try:
+            user_id = int(parts[2])
+        except ValueError:
+            await message.answer(badge(texts.ADMIN_ACTIVATE_USAGE))
+            return
+
     try:
-        user_id = int(parts[2])
         days = int(parts[3]) if len(parts) == 4 else None
         if days is not None and days <= 0:
             raise ValueError
@@ -284,11 +293,13 @@ async def deactivate_cmd(message: Message, session):
         await message.answer(badge(texts.ADMIN_DEACTIVATE_USAGE))
         return
 
-    try:
-        user_id = int(parts[1])
-    except ValueError:
-        await message.answer(badge(texts.ADMIN_DEACTIVATE_USAGE))
-        return
+    user_id = message.from_user.id if parts[1].lower() == "me" else None
+    if user_id is None:
+        try:
+            user_id = int(parts[1])
+        except ValueError:
+            await message.answer(badge(texts.ADMIN_DEACTIVATE_USAGE))
+            return
 
     result = await session.execute(select(User).where(User.telegram_id == user_id))
     user = result.scalar_one_or_none()
@@ -455,11 +466,13 @@ async def userinfo_cmd(message: Message, session):
         await message.answer(badge(texts.ADMIN_USERINFO_USAGE))
         return
 
-    try:
-        user_id = int(parts[1])
-    except ValueError:
-        await message.answer(badge(texts.ADMIN_USERINFO_USAGE))
-        return
+    user_id = message.from_user.id if parts[1].lower() == "me" else None
+    if user_id is None:
+        try:
+            user_id = int(parts[1])
+        except ValueError:
+            await message.answer(badge(texts.ADMIN_USERINFO_USAGE))
+            return
 
     result = await session.execute(select(User).where(User.telegram_id == user_id))
     user = result.scalar_one_or_none()
