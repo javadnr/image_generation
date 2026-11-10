@@ -39,7 +39,7 @@ SOURCE_UNKNOWN = "نامشخص (مستقیم)"
 
 # Plan emoji and marketing tags (UI only; ordering comes from models.PLANS).
 PLAN_EMOJI = {"bronze": "🥉", "silver": "🥈", "gold": "🥇", "diamond": "💎"}
-PLAN_TAGS = {"bronze": "", "silver": "", "gold": "🔥 بیشترین اعتبار", "diamond": ""}
+PLAN_TAGS = {"bronze": "", "silver": "محبوب‌ترین", "gold": "", "diamond": ""}
 
 GENERATING = "⏳ در حال تGENERATING..."
 GENERATION_SUCCESS = "✅ تصویر با موفقیت ساخته شد!"
