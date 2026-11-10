@@ -145,10 +145,7 @@ def test_premium_text_has_diamond_description(catalog):
     text = premium_h.premium_text(user, {})
     assert "الماسی" in text
     assert "120,000" in text
-    assert "مناسب تیم‌ها و گروه‌های حرفه‌ای" in text
-    # audience lines for all paid plans present
-    assert "مناسب کاربران تازه‌کار" in text
-    assert "مثل تولیدکنندگان محتوا" in text
+    # plan descriptions removed: only emoji, price, allowance, and image count shown
 
 
 def test_premium_menu_has_diamond_button(catalog):

@@ -97,7 +97,6 @@ def _plan_block(tier: str, discounts: dict | None) -> str:
     std_count = _standard_quality_count(plan_allowance(tier))
     return (
         f"{header}\n"
-        f"📝 {texts.PLAN_DESCRIPTIONS.get(tier, '')}\n"
         f"• {plan_allowance(tier):,} اعتبار\n"
         f"🖼 حدود {std_count:,} تصویر"
     )
@@ -131,7 +130,6 @@ def premium_text(user, discounts: dict | None = None) -> str:
         f"{free_block}"
         f"{plan_blocks}\n\n"
         f"{_quality_breakdown_text()}\n"
-        f"{texts.EDIT_COUNT_NOTE}\n\n"
         f"{_fx_note_text()}\n"
         f"👇 پلن موردنظرت رو انتخاب کن:"
     )
