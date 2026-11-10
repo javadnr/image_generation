@@ -61,17 +61,6 @@ def _fx_note() -> str | None:
     )
 
 
-def _quality_breakdown_text() -> str:
-    lines = []
-    for plan in PLANS:
-        count = _standard_quality_count(plan_allowance(plan))
-        if count:
-            lines.append(f"{texts.PLAN_EMOJI[plan]} {count:,} تصویر")
-    if not lines:
-        return ""
-    return "📊 تعداد تقریبی تصاویر هر پلن:\n" + "\n".join(lines) + "\n"
-
-
 def _fx_note_text() -> str:
     note = _fx_note()
     return (note + "\n") if note else ""
@@ -129,7 +118,6 @@ def premium_text(user, discounts: dict | None = None) -> str:
         f"📅 همه پلن‌ها ماهانه هستند.\n\n"
         f"{free_block}"
         f"{plan_blocks}\n\n"
-        f"{_quality_breakdown_text()}\n"
         f"{_fx_note_text()}\n"
         f"👇 پلن موردنظرت رو انتخاب کن:"
     )

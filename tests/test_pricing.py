@@ -100,11 +100,13 @@ def test_quality_breakdown_math(catalog, monkeypatch):
 
 
 def test_quality_breakdown_text_lists_all_plans(catalog):
+    from types import SimpleNamespace
     from bot.handlers import premium as premium_h
 
-    text = premium_h._quality_breakdown_text()
-    assert "🥉" in text and "🥈" in text and "🥇" in text and "💎" in text
-    assert "41 تصویر" in text
+    # _quality_breakdown_text removed; premium_text should not contain it
+    user = SimpleNamespace(tier="free")
+    text = premium_h.premium_text(user, {})
+    assert "تعداد تقریبی تصاویر هر پلن" not in text
 
 
 def test_fx_note_shows_cached_rate(catalog):
@@ -140,12 +142,14 @@ def test_edits_available_math(monkeypatch):
 
 
 def test_plan_breakdown_includes_edits(catalog, monkeypatch):
+    from types import SimpleNamespace
     from bot.config import settings
     from bot.handlers import premium as premium_h
     monkeypatch.setattr(settings, "IMAGE_EDIT_COST_TOKENS", 4000)
 
-    text = premium_h._quality_breakdown_text()
-    # Edits no longer appear in plan breakdown text
+    # _quality_breakdown_text removed; verify no edit-related text appears
+    user = SimpleNamespace(tier="free")
+    text = premium_h.premium_text(user, {})
     assert "ویرایش" not in text
 
 
