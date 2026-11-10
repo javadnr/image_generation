@@ -1,4 +1,6 @@
 from datetime import datetime
+from sqlalchemy import select
+
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from bot.services.user import get_or_create_user
@@ -20,6 +22,7 @@ from bot.keyboards.inline import premium_menu
 from bot.utils.timezone import jalali_date
 from bot.keyboards.reply import main_menu
 from bot.db.engine import async_session
+from bot.db.models import BotSettings
 from bot.config import settings
 from bot.texts import badge
 import bot.texts as texts
@@ -151,6 +154,15 @@ async def answer_quota_exceeded(message: Message, session, user, discounts: dict
 @router.message(F.text == texts.MAIN_MENU_PREMIUM)
 async def premium(message: Message, session):
     user = await get_or_create_user(session, message.from_user.id)
+
+    result = await session.execute(select(BotSettings).where(BotSettings.id == 1))
+    settings_row = result.scalar_one_or_none()
+    premium_buy_enabled = settings_row.premium_buy_enabled if settings_row else True
+
+    if not premium_buy_enabled:
+        await message.answer(badge(texts.PREMIUM_BUY_DISABLED))
+        return
+
     await log_event(session, user, BUY_SUBSCRIPTION_CLICKED)
     await log_event(session, user, PRICING_VIEWED)
     discounts = await get_active_discounts(session)

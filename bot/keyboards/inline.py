@@ -178,10 +178,14 @@ def edit_confirm_quality_keyboard(tier: str, current: str) -> InlineKeyboardMark
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def admin_status(bot_enabled: bool) -> InlineKeyboardMarkup:
+def admin_status(bot_enabled: bool, premium_buy_enabled: bool = True) -> InlineKeyboardMarkup:
     toggle_text = "🔴 غیرفعال کردن ربات" if bot_enabled else "🟢 فعال کردن ربات"
+    premium_toggle_text = (
+        "🔴 غیرفعال کردن خرید اشتراک" if premium_buy_enabled else "🟢 فعال کردن خرید اشتراک"
+    )
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=toggle_text, callback_data="toggle_bot")],
+        [InlineKeyboardButton(text=premium_toggle_text, callback_data="toggle_premium_buy")],
         [InlineKeyboardButton(text="🔄 ریست روزانه همه", callback_data="reset_daily")],
         [InlineKeyboardButton(text="💾 پشتیبان‌گیری همین حالا", callback_data="backup_now")],
     ])

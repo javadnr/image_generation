@@ -52,6 +52,7 @@ async def bot_status(message: Message, session):
     result = await session.execute(select(BotSettings).where(BotSettings.id == 1))
     settings_row = result.scalar_one_or_none()
     bot_enabled = settings_row.bot_enabled if settings_row else True
+    premium_buy_enabled = settings_row.premium_buy_enabled if settings_row else True
 
     total_users = await get_all_users_count(session)
     active_today = await get_active_today_count(session)
@@ -79,6 +80,7 @@ async def bot_status(message: Message, session):
     source_stats = await get_source_stats(session)
 
     status_text = "فعال" if bot_enabled else "غیرفعال"
+    premium_buy_text = "فعال" if premium_buy_enabled else "غیرفعال"
 
     text = badge(
         texts.ADMIN_STATS.format(
@@ -112,7 +114,7 @@ async def bot_status(message: Message, session):
         )
     )
 
-    await message.answer(text, reply_markup=admin_status(bot_enabled))
+    await message.answer(text, reply_markup=admin_status(bot_enabled, premium_buy_enabled))
 
 
 @router.callback_query(F.data == "toggle_bot")
@@ -138,6 +140,37 @@ async def toggle_bot(callback: CallbackQuery, session):
     await callback.message.edit_text(
         badge(f"📊 وضعیت ربات\n\n🟢 وضعیت: {new_status}"),
         reply_markup=admin_status(settings_row.bot_enabled),
+    )
+    await callback.answer(toggle_text)
+
+
+@router.callback_query(F.data == "toggle_premium_buy")
+async def toggle_premium_buy(callback: CallbackQuery, session):
+    if callback.from_user.id not in settings.ADMIN_IDS:
+        await callback.answer("⛔ دسترسی ندارید.", show_alert=True)
+        return
+
+    result = await session.execute(select(BotSettings).where(BotSettings.id == 1))
+    settings_row = result.scalar_one_or_none()
+
+    if settings_row:
+        settings_row.premium_buy_enabled = not settings_row.premium_buy_enabled
+    else:
+        settings_row = BotSettings(id=1, premium_buy_enabled=False)
+        session.add(settings_row)
+
+    await session.commit()
+
+    new_status = "فعال" if settings_row.premium_buy_enabled else "غیرفعال"
+    toggle_text = (
+        texts.ADMIN_PREMIUM_BUY_ON
+        if settings_row.premium_buy_enabled
+        else texts.ADMIN_PREMIUM_BUY_OFF
+    )
+
+    await callback.message.edit_text(
+        badge(f"📊 وضعیت ربات\n\n🟢 وضعیت: {new_status}"),
+        reply_markup=admin_status(settings_row.bot_enabled, settings_row.premium_buy_enabled),
     )
     await callback.answer(toggle_text)
 

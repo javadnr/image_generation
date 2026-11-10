@@ -172,6 +172,11 @@ ADMIN_STATS = (
 )
 ADMIN_TOGGLE_ON = "🟢 ربات فعال شد."
 ADMIN_TOGGLE_OFF = "🔴 ربات غیرفعال شد."
+
+# Premium buy toggle
+PREMIUM_BUY_DISABLED = "⚠️ خرید اشتراک در حال حاضر غیرفعال است. لطفاً بعداً تلاش کنید."
+ADMIN_PREMIUM_BUY_ON = "🟢 خرید اشتراک فعال شد."
+ADMIN_PREMIUM_BUY_OFF = "🔴 خرید اشتراک غیرفعال شد."
 ADMIN_RESET_DONE = "✅ روزانه همه کاربران ریست شد."
 ADMIN_BACKUP_STARTED = "⏳ پشتیبان‌گیری شروع شد؛ نتیجه تا لحظاتی دیگر اعلام می‌شود."
 ADMIN_BACKUP_BUSY = "⏳ یک پشتیبان‌گیری در حال اجراست. لطفاً بعداً تلاش کنید."
