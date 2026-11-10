@@ -57,7 +57,7 @@ QUOTA_REMAINING_TOKENS = "📊 موجودی شما\n\n📦 پلن: {tier}\n🤖 
 
 # Quality
 QUALITY_TITLE = "کیفیت تصویر خروجی بعدی رو انتخاب کن:"
-QUALITY_LABELS = {"low": "استاندارد", "medium": "متوسط", "high": "بالا"}
+QUALITY_LABELS = {"low": "استاندارد", "medium": "بالا", "high": "عالی"}
 QUALITY_SET = "✅ کیفیت تصویر روی {label} تنظیم شد."
 QUALITY_LOCKED = "🔒 این کیفیت مخصوص کاربران پریمیوم است."
 

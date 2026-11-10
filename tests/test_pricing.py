@@ -180,7 +180,7 @@ def test_settings_summary_text(catalog):
         tier="bronze",
     )
     text = quality_h._settings_summary_text(user)
-    assert "متوسط" in text
+    assert "بالا" in text
     assert "Portrait (3:4)" in text
     assert "83" in text
     assert "استاندارد" in text
