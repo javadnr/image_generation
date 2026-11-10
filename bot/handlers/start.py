@@ -51,9 +51,10 @@ async def verify_join(callback: CallbackQuery, session):
             continue
 
     if all_joined:
-        await callback.message.edit_text(
+        await callback.message.answer(
             badge(texts.WELCOME),
             reply_markup=main_menu(user),
         )
+        await callback.answer()
     else:
         await callback.answer(texts.FORCE_JOIN_NOT_JOINED, show_alert=True)
