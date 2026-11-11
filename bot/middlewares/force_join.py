@@ -25,6 +25,7 @@ class ForceJoinMiddleware(BaseMiddleware):
             return
 
         bot = data.get("bot")
+        all_checked = True
         for channel_id in settings.REQUIRED_CHANNELS:
             try:
                 member = await bot.get_chat_member(chat_id=channel_id, user_id=user_id)
@@ -32,8 +33,13 @@ class ForceJoinMiddleware(BaseMiddleware):
                     await event.answer(texts.FORCE_JOIN_TITLE, reply_markup=force_join())
                     return
             except Exception:
-                continue
+                # If we can't check the channel (e.g., bot not in channel, invalid ID),
+                # assume user hasn't joined and show the force join message
+                all_checked = False
+                await event.answer(texts.FORCE_JOIN_TITLE, reply_markup=force_join())
+                return
 
+        # All channels verified and user is a member in all of them
         await handler(event, data)
 
 
@@ -65,7 +71,10 @@ class ForceJoinCallbackMiddleware(BaseMiddleware):
                     await event.answer(texts.FORCE_JOIN_NOT_JOINED, show_alert=True)
                     return
             except Exception:
-                continue
+                # If we can't check the channel (e.g., bot not in channel, invalid ID),
+                # assume user hasn't joined and show the force join message
+                await event.answer(texts.FORCE_JOIN_NOT_JOINED, show_alert=True)
+                return
 
         await handler(event, data)
 
