@@ -97,3 +97,9 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Override REQUIRED_CHANNELS based on API_SERVER to support both Telegram and Bale instances.
+# Telegram channels are loaded from .env, Bale channels from .env.bale.
+# This ensures each bot instance checks only its own required channels.
+if settings.API_SERVER == "bale":
+    settings.REQUIRED_CHANNELS = {"4818711476": "https://ble.ir/kiteck_tm"}
