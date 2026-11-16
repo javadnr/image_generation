@@ -92,6 +92,7 @@ async def handle_successful_payment(message: Message, **kwargs) -> None:
             amount=result.get("amount"),
             expire_dt=result.get("expire_dt"),
             paid_at=result.get("paid_at"),
+            source=user.source,
         )
         logger.info("Bale payment completed user=%d plan=%s", message.from_user.id, plan)
     else:

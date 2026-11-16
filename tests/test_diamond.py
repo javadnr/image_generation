@@ -139,8 +139,10 @@ async def test_diamond_deactivate_returns_to_free(db, catalog):
 
 # ---------- UI: menu text + buttons ----------
 
-def test_premium_text_has_diamond_description(catalog):
+def test_premium_text_has_diamond_description(catalog, monkeypatch):
+    from bot.config import settings
     from bot.handlers import premium as premium_h
+    monkeypatch.setattr(settings, "DIAMOND_ENABLED", True)
     user = SimpleNamespace(tier="free")
     text = premium_h.premium_text(user, {})
     assert "الماسی" in text
@@ -148,8 +150,10 @@ def test_premium_text_has_diamond_description(catalog):
     # plan descriptions removed: only emoji, price, allowance, and image count shown
 
 
-def test_premium_menu_has_diamond_button(catalog):
+def test_premium_menu_has_diamond_button(catalog, monkeypatch):
+    from bot.config import settings
     from bot.keyboards.inline import premium_menu
+    monkeypatch.setattr(settings, "DIAMOND_ENABLED", True)
     user = SimpleNamespace(tier="free")
     kb = premium_menu(user, {})
     datas = [b.callback_data for row in kb.inline_keyboard for b in row]
@@ -158,19 +162,19 @@ def test_premium_menu_has_diamond_button(catalog):
     assert datas == ["buy_bronze", "buy_silver", "buy_gold", "buy_diamond"]
 
 
-def test_admin_stats_template_has_diamond_placeholders():
+def test_admin_stats_template_has_plan_placeholders():
     import bot.texts as texts
-    # format() must not raise: every diamond placeholder is present
+    # format() must not raise: the plan blocks are filled dynamically
     out = texts.ADMIN_STATS.format(
         status="x", total_users=0, active_today=0, joined_today=0,
         started_today=0, success_today=0, failed_today=0,
         click_total=0, click_unique=0, pricing_viewers=0, pricing_new=0,
         acquisition_sources="—",
-        plan_bronze=0, plan_silver=0, plan_gold=0, plan_diamond=0,
+        plan_selection="🥉0 🥈0 🥇0 💎0",
         pay_started=0, pay_success=0,
-        free_images=0, bronze_images=0, silver_images=0, gold_images=0,
-        diamond_images=0,
-        bronze_users=0, silver_users=0, gold_users=0, diamond_users=0,
+        free_images=0,
+        plan_images="\n  برنزی: 0\n  الماسی: 0",
+        plan_users="\n  برنزی: 0\n  الماسی: 0",
     )
     assert "الماسی" in out
 

@@ -22,14 +22,28 @@ The image API only accepts sizes where both sides are multiples of 16
 and at least 1024px; every entry must satisfy that.
 """
 IMAGE_SIZES = {
-    "square": {"label": "Square (1:1)", "width": 1024, "height": 1024},
-    "portrait": {"label": "Portrait (3:4)", "width": 1024, "height": 1344},
-    "story": {"label": "Story (9:16)", "width": 1024, "height": 1792},
-    "landscape": {"label": "Landscape (4:3)", "width": 1344, "height": 1024},
-    "widescreen": {"label": "Widescreen (16:9)", "width": 1792, "height": 1024},
+    "square": {"label": "مربع (۱:۱)", "width": 1024, "height": 1024},
+    "portrait": {"label": "عمودی (۳:۴)", "width": 1024, "height": 1344},
+    "story": {"label": "استوری (۹:۱۶)", "width": 1024, "height": 1792},
+    "landscape": {"label": "افقی (۴:۳)", "width": 1344, "height": 1024},
+    "widescreen": {"label": "عریض (۱۶:۹)", "width": 1792, "height": 1024},
 }
 DEFAULT_IMAGE_SIZE = "square"
 VALID_IMAGE_SIZES = tuple(IMAGE_SIZES)
+
+# Free users are pinned to this ratio; every other size is premium-only.
+FREE_IMAGE_SIZE = "story"
+
+
+def size_allowed(tier: str, size: str) -> bool:
+    return tier != "free" or size == FREE_IMAGE_SIZE
+
+
+def effective_size(tier: str, size: str | None) -> str:
+    """Size actually used for a tier; free users always get FREE_IMAGE_SIZE."""
+    if tier == "free":
+        return FREE_IMAGE_SIZE
+    return size or DEFAULT_IMAGE_SIZE
 
 
 def size_label(key: str | None) -> str:
@@ -153,6 +167,16 @@ def charge_for(actual_tokens: int | None) -> int:
     return _ceil(actual_tokens * profit_rate())
 
 
+def capped_charge(balance: int, actual_tokens: int | None) -> tuple:
+    """(charge, deducted) for one request against a balance.
+
+    The charge keeps the real API cost (profit included) for admin
+    reporting; the deduction never exceeds what the user actually has.
+    """
+    charged = charge_for(actual_tokens)
+    return charged, min(charged, max(0, balance or 0))
+
+
 def images_per_quality(balance: int, model_id: str | None) -> dict:
     """Approximate remaining images per quality (floor division).
 
@@ -171,6 +195,16 @@ def images_per_quality(balance: int, model_id: str | None) -> dict:
 # Ordered paid plans (lowest -> highest). Single source of truth for
 # every place that iterates plans (menus, stats, discounts, validation).
 PLANS = ("bronze", "silver", "gold", "diamond")
+
+
+def plan_enabled(plan: str) -> bool:
+    """Whether a plan is offered, from its *_ENABLED env flag."""
+    return bool(getattr(settings, f"{plan.upper()}_ENABLED", True))
+
+
+def enabled_plans() -> tuple:
+    """PLANS filtered by the env flags, in plan order."""
+    return tuple(p for p in PLANS if plan_enabled(p))
 
 
 def plan_allowance(plan: str) -> int:

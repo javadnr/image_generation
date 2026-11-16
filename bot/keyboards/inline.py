@@ -1,6 +1,8 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from bot.config import settings
-from bot.services.models import PLANS, model_ids, model_label, is_free_model
+from bot.services.models import (
+    enabled_plans, model_ids, model_label, is_free_model, size_allowed,
+)
 from bot.services.pricing import plan_price_toman
 import bot.texts as texts
 
@@ -25,11 +27,11 @@ def force_join() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def premium_menu(user, discounts: dict | None = None) -> InlineKeyboardMarkup:
+def premium_menu(user, discounts: dict | None = None) -> InlineKeyboardMarkup | None:
     from bot.services.discounts import discount_for
     buttons = []
     if user.tier == "free":
-        for tier in PLANS:
+        for tier in enabled_plans():
             emoji = texts.PLAN_EMOJI[tier]
             tier_tag = texts.PLAN_TAGS.get(tier, "")
             pct = discount_for(tier, discounts)
@@ -43,12 +45,12 @@ def premium_menu(user, discounts: dict | None = None) -> InlineKeyboardMarkup:
                 text=f"{emoji} {texts.TIER_NAMES_FA[tier]} — {price_text} {tag}",
                 callback_data=f"buy_{tier}",
             )])
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
+    return InlineKeyboardMarkup(inline_keyboard=buttons) if buttons else None
 
 
 def plans_button() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💎 مشاهده پلن‌ها", callback_data="show_plans")],
+        [InlineKeyboardButton(text="🛒 خرید اشتراک", callback_data="show_plans")],
     ])
 
 
@@ -76,13 +78,17 @@ def settings_hub_keyboard() -> InlineKeyboardMarkup:
     ])
 
 
-def size_keyboard(current: str, show_back: bool) -> InlineKeyboardMarkup:
+def size_keyboard(tier: str, current: str, show_back: bool) -> InlineKeyboardMarkup:
     from bot.services.models import IMAGE_SIZES
     buttons = []
     for value in IMAGE_SIZES:
         label = IMAGE_SIZES[value]["label"]
-        tick = "✅ " if value == current else ""
-        buttons.append([InlineKeyboardButton(text=f"{tick}{label}", callback_data=f"size:{value}")])
+        if not size_allowed(tier, value):
+            text = f"🔒 {label}"
+        else:
+            tick = "✅ " if value == current else ""
+            text = f"{tick}{label}"
+        buttons.append([InlineKeyboardButton(text=text, callback_data=f"size:{value}")])
     if show_back:
         buttons.append([InlineKeyboardButton(text=texts.SETTINGS_BACK, callback_data="settings_home")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -126,13 +132,17 @@ def confirm_edit_keyboard() -> InlineKeyboardMarkup:
     ])
 
 
-def confirm_size_keyboard(current: str) -> InlineKeyboardMarkup:
+def confirm_size_keyboard(tier: str, current: str) -> InlineKeyboardMarkup:
     from bot.services.models import IMAGE_SIZES
     buttons = []
     for value in IMAGE_SIZES:
         label = IMAGE_SIZES[value]["label"]
-        tick = "✅ " if value == current else ""
-        buttons.append([InlineKeyboardButton(text=f"{tick}{label}", callback_data=f"gen_confirm_size:{value}")])
+        if not size_allowed(tier, value):
+            text = f"🔒 {label}"
+        else:
+            tick = "✅ " if value == current else ""
+            text = f"{tick}{label}"
+        buttons.append([InlineKeyboardButton(text=text, callback_data=f"gen_confirm_size:{value}")])
     buttons.append([InlineKeyboardButton(text=texts.BTN_EDIT_QUALITY, callback_data="gen_edit_quality")])
     buttons.append([InlineKeyboardButton(text="⬅️ بازگشت به تایید", callback_data="gen_back_to_confirm")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -152,13 +162,17 @@ def confirm_quality_keyboard(tier: str, current: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def edit_confirm_size_keyboard(current: str) -> InlineKeyboardMarkup:
+def edit_confirm_size_keyboard(tier: str, current: str) -> InlineKeyboardMarkup:
     from bot.services.models import IMAGE_SIZES
     buttons = []
     for value in IMAGE_SIZES:
         label = IMAGE_SIZES[value]["label"]
-        tick = "✅ " if value == current else ""
-        buttons.append([InlineKeyboardButton(text=f"{tick}{label}", callback_data=f"edt_confirm_size:{value}")])
+        if not size_allowed(tier, value):
+            text = f"🔒 {label}"
+        else:
+            tick = "✅ " if value == current else ""
+            text = f"{tick}{label}"
+        buttons.append([InlineKeyboardButton(text=text, callback_data=f"edt_confirm_size:{value}")])
     buttons.append([InlineKeyboardButton(text=texts.BTN_EDIT_QUALITY, callback_data="edt_edit_quality")])
     buttons.append([InlineKeyboardButton(text="⬅️ بازگشت به تایید", callback_data="edt_back_to_confirm")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)

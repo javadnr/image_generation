@@ -5,6 +5,7 @@ from aiogram import Bot
 from aiogram.types import BufferedInputFile
 from bot.config import settings
 from bot.utils.timezone import jalali_datetime
+import bot.texts as texts
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,7 @@ async def send_premium_report(
     amount: int | None = None,
     expire_dt: datetime | None = None,
     paid_at: datetime | None = None,
+    source: str | None = None,
 ) -> None:
     channel_id = settings.PAYMENT_REPORT_CHANNEL_ID or settings.REPORT_CHANNEL_ID
     if not channel_id:
@@ -35,6 +37,7 @@ async def send_premium_report(
             "─────────────────\n"
             f"👤 شناسه کاربر: {user_id}\n"
             f"📛 نام کاربری: {username_display}\n"
+            f"🧭 منبع آشنایی: {source or texts.SOURCE_UNKNOWN}\n"
             f"📋 پلن خریداری شده: {tier}\n"
             f"🔢 شناسه پرداخت: {payment_id or '—'}\n"
             f"💵 مبلغ: {amount_display}\n"
@@ -98,6 +101,8 @@ async def send_processed_report(
     image_bytes: bytes,
     original_bytes: bytes | None = None,
     remaining: int | None = None,
+    balance_before: int | None = None,
+    deducted: int | None = None,
 ) -> None:
     """Send processed request (prompt, tokens, user, pictures) to the channel. Never raises."""
     channel_id = settings.PROCESSED_REQUESTS_CHANNEL_ID
@@ -105,6 +110,8 @@ async def send_processed_report(
         return
     from bot.services.models import charge_for
     charged = charge_for(tokens) if tokens is not None else None
+    if deducted is None:
+        deducted = charged
     caption = (
         "🖼 درخواست پردازش‌شده\n"
         "─────────────────\n"
@@ -113,6 +120,8 @@ async def send_processed_report(
         f"📝 پرامپت: {prompt[:400] or '—'}\n"
         f"🔢 توکن مصرفی (API): {tokens if tokens is not None else '—'}\n"
         f"➕ با سود: {charged if charged is not None else '—'}\n"
+        f"📊 موجودی قبل از کسر: {balance_before if balance_before is not None else '—'}\n"
+        f"➖ کسر شده از کاربر: {deducted if deducted is not None else '—'}\n"
         f"💰 باقی‌مانده: {remaining if remaining is not None else '—'}"
     )
     try:

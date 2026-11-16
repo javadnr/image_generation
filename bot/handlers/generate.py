@@ -16,8 +16,8 @@ from bot.handlers.premium import answer_quota_exceeded
 from bot.services.queue import acquire_queue, release_queue
 from bot.services.image import generate_image
 from bot.services.models import (
-    default_model, charge_for, images_per_quality,
-    DEFAULT_IMAGE_SIZE, image_dimensions, size_label,
+    default_model, capped_charge, images_per_quality,
+    image_dimensions, size_label, effective_size, size_allowed,
 )
 from bot.services.report import send_error_report, send_processed_report
 from bot.keyboards.reply import main_menu
@@ -52,7 +52,7 @@ async def help_message(message: Message, session):
 def _render_confirm_text(user, prompt: str, is_edit: bool = False) -> str:
     """Render confirmation text with current size, quality, and prompt."""
     quality = user.image_quality or "low"
-    size_key = user.image_size or DEFAULT_IMAGE_SIZE
+    size_key = effective_size(user.tier, user.image_size)
     quality_label = texts.QUALITY_LABELS.get(quality, quality)
     size_label_text = size_label(size_key)
     title = texts.CONFIRM_EDIT_TITLE if is_edit else texts.CONFIRM_GENERATE_TITLE
@@ -106,7 +106,7 @@ async def gen_edit_size(callback: CallbackQuery, session):
         user = await get_or_create_user(session, callback.from_user.id)
         await callback.message.edit_text(
             badge("اندازه مورد نظر رو انتخاب کن:"),
-            reply_markup=confirm_size_keyboard(user.image_size or DEFAULT_IMAGE_SIZE),
+            reply_markup=confirm_size_keyboard(user.tier, effective_size(user.tier, user.image_size)),
         )
         await callback.answer()
     except Exception as e:
@@ -144,6 +144,10 @@ async def gen_confirm_size(callback: CallbackQuery, session):
             return
 
         user = await get_or_create_user(session, callback.from_user.id)
+        if not size_allowed(user.tier, value):
+            await callback.answer(texts.SIZE_LOCKED, show_alert=True)
+            return
+
         from bot.services.user import set_size
         await set_size(session, user, value)
         user.image_size = value
@@ -230,7 +234,7 @@ async def confirm_yes(callback: CallbackQuery, session):
     await callback.answer()
     await session.refresh(user)
     quality = user.image_quality or "low"
-    size_key = user.image_size or DEFAULT_IMAGE_SIZE
+    size_key = effective_size(user.tier, user.image_size)
     try:
         await callback.message.edit_text(
             badge(
@@ -264,7 +268,7 @@ async def _run_generation(message, session, user, prompt_text, tg_user, bot, gen
     # Captured before any tier change so the right semaphore is released.
     queue_tier = user.tier
     try:
-        width, height = image_dimensions(user.image_size or DEFAULT_IMAGE_SIZE)
+        width, height = image_dimensions(effective_size(user.tier, user.image_size))
         logging.info("User %d tier=%s generating %dx%d", user.telegram_id, user.tier, width, height)
 
         image_bytes, tokens = await generate_image(
@@ -279,11 +283,13 @@ async def _run_generation(message, session, user, prompt_text, tg_user, bot, gen
         model_id = user.image_model or default_model()
         quality = user.image_quality or "low"
         credit_line = None
+        balance_before = user.token_balance or 0
+        charged = deducted = None
         if tokens is not None:
-            charged = charge_for(tokens)
-            remaining = max(0, (user.token_balance or 0) - charged)
+            charged, deducted = capped_charge(balance_before, tokens)
+            remaining = balance_before - deducted
             credit_line = (
-                f"💳 مصرف: {charged:,} اعتبار | "
+                f"💳 مصرف: {deducted:,} اعتبار | "
                 f"باقی‌مانده: {remaining:,} اعتبار"
             )
         if credit_line:
@@ -320,7 +326,7 @@ async def _run_generation(message, session, user, prompt_text, tg_user, bot, gen
                     badge(texts.CREDIT_SPENT),
                     reply_markup=plans_button(),
                 )
-            elif left == 1:
+            elif left == 1 and user.tier == "free":
                 await message.answer(
                     badge(texts.CREDIT_LOW),
                     reply_markup=plans_button(),
@@ -333,6 +339,8 @@ async def _run_generation(message, session, user, prompt_text, tg_user, bot, gen
             tokens=tokens,
             image_bytes=image_bytes,
             remaining=user.token_balance,
+            balance_before=balance_before,
+            deducted=deducted,
         )
 
     except Exception as e:

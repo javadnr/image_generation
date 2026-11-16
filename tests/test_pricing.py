@@ -181,7 +181,7 @@ def test_settings_summary_text(catalog):
     )
     text = quality_h._settings_summary_text(user)
     assert "بالا" in text
-    assert "Portrait (3:4)" in text
+    assert "عمودی (۳:۴)" in text
     assert "83" in text
     assert "استاندارد" in text
 
@@ -196,7 +196,7 @@ def test_settings_summary_text_defaults(catalog):
     )
     text = quality_h._settings_summary_text(user)
     assert "استاندارد" in text
-    assert "Square (1:1)" in text
+    assert "استوری (۹:۱۶)" in text
 
 
 def test_model_help_text(catalog):

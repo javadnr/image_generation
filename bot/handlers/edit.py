@@ -15,7 +15,7 @@ from bot.handlers.premium import answer_quota_exceeded
 from bot.services.queue import acquire_queue, release_queue
 from bot.services.image import edit_image
 from bot.services.report import send_error_report, send_processed_report
-from bot.services.models import charge_for, DEFAULT_IMAGE_SIZE, image_dimensions, size_label
+from bot.services.models import capped_charge, image_dimensions, size_label, effective_size, size_allowed
 from bot.keyboards.inline import (
     premium_menu, plans_button, confirm_edit_keyboard,
     edit_confirm_size_keyboard, edit_confirm_quality_keyboard,
@@ -32,7 +32,7 @@ PENDING_EDITS: dict[int, dict] = {}
 def _render_edit_confirm_text(user, caption: str) -> str:
     """Render confirmation text for edit with current size, quality, and caption."""
     quality = user.image_quality or "low"
-    size_key = user.image_size or DEFAULT_IMAGE_SIZE
+    size_key = effective_size(user.tier, user.image_size)
     quality_label = texts.QUALITY_LABELS.get(quality, quality)
     size_label_text = size_label(size_key)
     warning = ""
@@ -151,7 +151,7 @@ async def confirm_yes_edit(callback: CallbackQuery, session):
     try:
         await set_generating(session, user, True)
 
-        width, height = image_dimensions(user.image_size or DEFAULT_IMAGE_SIZE)
+        width, height = image_dimensions(effective_size(user.tier, user.image_size))
 
         gen_msg = await callback.message.answer(badge("در حال ویرایش تصویر...."))
 
@@ -169,12 +169,14 @@ async def confirm_yes_edit(callback: CallbackQuery, session):
 
         await gen_msg.delete()
 
+        balance_before = user.token_balance or 0
+        charged = deducted = None
         if tokens is not None:
-            charged = charge_for(tokens)
-            remaining = max(0, (user.token_balance or 0) - charged)
+            charged, deducted = capped_charge(balance_before, tokens)
+            remaining = balance_before - deducted
             caption = (
                 f"✅ {(pending['caption'] or '')[:60]}\n"
-                f"💳 مصرف: {charged:,} اعتبار | "
+                f"💳 مصرف: {deducted:,} اعتبار | "
                 f"باقی‌مانده: {remaining:,} اعتبار"
             )
         else:
@@ -217,6 +219,8 @@ async def confirm_yes_edit(callback: CallbackQuery, session):
             image_bytes=image_bytes,
             original_bytes=original_bytes,
             remaining=user.token_balance,
+            balance_before=balance_before,
+            deducted=deducted,
         )
 
     except Exception as e:
@@ -276,7 +280,7 @@ async def edt_edit_size(callback: CallbackQuery, session):
         user = await get_or_create_user(session, callback.from_user.id)
         await callback.message.edit_text(
             badge("اندازه مورد نظر رو انتخاب کن:"),
-            reply_markup=edit_confirm_size_keyboard(user.image_size or DEFAULT_IMAGE_SIZE),
+            reply_markup=edit_confirm_size_keyboard(user.tier, effective_size(user.tier, user.image_size)),
         )
         await callback.answer()
     except Exception as e:
@@ -314,6 +318,10 @@ async def edt_confirm_size(callback: CallbackQuery, session):
             return
 
         user = await get_or_create_user(session, callback.from_user.id)
+        if not size_allowed(user.tier, value):
+            await callback.answer(texts.SIZE_LOCKED, show_alert=True)
+            return
+
         from bot.services.user import set_size
         await set_size(session, user, value)
         user.image_size = value

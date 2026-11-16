@@ -85,7 +85,7 @@ def test_image_dimensions_mapping():
     assert image_dimensions("story") == (1024, 1792)
     assert image_dimensions("landscape") == (1344, 1024)
     assert image_dimensions("widescreen") == (1792, 1024)
-    assert size_label("story") == "Story (9:16)"
+    assert size_label("story") == "استوری (۹:۱۶)"
 
 
 def test_image_dimensions_unknown_raises():
@@ -136,23 +136,31 @@ async def test_size_change_keeps_quality(db):
 
 
 def test_size_keyboard_tick_and_callbacks():
-    kb = size_keyboard("story", show_back=False)
+    kb = size_keyboard("bronze", "story", show_back=False)
     texts = _texts(kb)
-    assert texts[0] == "Square (1:1)"
-    assert texts[2] == "✅ Story (9:16)"
+    assert texts[0] == "مربع (۱:۱)"
+    assert texts[2] == "✅ استوری (۹:۱۶)"
     assert _callbacks(kb) == [
         "size:square", "size:portrait", "size:story",
         "size:landscape", "size:widescreen",
     ]
 
 
+def test_size_keyboard_locks_non_story_for_free():
+    kb = size_keyboard("free", "story", show_back=False)
+    texts = _texts(kb)
+    assert texts[0] == "🔒 مربع (۱:۱)"
+    assert texts[2] == "✅ استوری (۹:۱۶)"
+    assert all(t.startswith("🔒 ") for i, t in enumerate(texts) if i != 2)
+
+
 def test_size_keyboard_back_row():
-    kb_with = size_keyboard("square", show_back=True)
+    kb_with = size_keyboard("bronze", "square", show_back=True)
     cbs_with = _callbacks(kb_with)
     assert cbs_with[-1] == "settings_home"
     assert _texts(kb_with)[-1] == "⬅️ بازگشت"
 
-    kb_without = size_keyboard("square", show_back=False)
+    kb_without = size_keyboard("bronze", "square", show_back=False)
     assert "settings_home" not in _callbacks(kb_without)
 
 

@@ -108,6 +108,34 @@ async def test_reset_all_daily_refills_free_only(db, free_grant):
 
 
 @pytest.mark.asyncio
+async def test_daily_reset_only_when_enabled(db, free_grant, monkeypatch):
+    from bot.config import settings
+    import bot.db.engine as engine_mod
+
+    user = await _make_user(db, 807, tier="free", token_balance=10)
+    await db.commit()
+
+    class _Ctx:
+        async def __aenter__(self):
+            return db
+
+        async def __aexit__(self, *exc):
+            return False
+
+    monkeypatch.setattr(engine_mod, "async_session", lambda: _Ctx())
+
+    monkeypatch.setattr(settings, "DAILY_RESET", False)
+    await user_svc.run_daily_reset()
+    await db.refresh(user)
+    assert user.token_balance == 10
+
+    monkeypatch.setattr(settings, "DAILY_RESET", True)
+    await user_svc.run_daily_reset()
+    await db.refresh(user)
+    assert user.token_balance == 1000
+
+
+@pytest.mark.asyncio
 async def test_set_tier_free_grants(db, free_grant):
     user = await _make_user(db, 806, tier="bronze", token_balance=777)
     await db.commit()

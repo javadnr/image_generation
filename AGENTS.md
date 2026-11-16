@@ -35,7 +35,9 @@ bot/
 User sends photo with caption → premium + balance check (fixed `IMAGE_EDIT_COST_TOKENS`) → download to temp → call OpenAI edit API → deduct exact actual tokens only on success → send result + original to channel, delete temp
 
 ### Daily Reset
-No automatic reset. Free credit is one-time; premium uses token balances. Admin "reset daily" button resets free `daily_used`.
+Free credit is one-time unless `DAILY_RESET=true`, which refills every free
+user to `FREE_USAGE_TOKEN` at 00:00 Asia/Tehran. The admin "reset daily"
+button does the same on demand. Premium balances are never reset.
 
 ## DB Schema
 

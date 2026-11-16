@@ -171,6 +171,7 @@ async def verify_zarinpal_payment(session: AsyncSession, tx_id: str) -> dict:
             "payment_ref_id": tx.payment_ref_id,
             "amount": tx.amount,
             "telegram_id": user.telegram_id,
+            "source": user.source,
         }
     elif code == -51:
         return {"success": False, "reason": "link_expired"}

@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     DIAMOND_QUEUE_SIZE: int = 0
     FREE_USAGE_TOKEN: int = 1000
     ALLOW_FREE: bool = True
+    DAILY_RESET: bool = False
     PROFIT_PERCENTAGE: float = 0.0
     IMAGE_EDIT_COST_TOKENS: int = 4000
     LOW_EDIT: int = 0
@@ -28,6 +29,10 @@ class Settings(BaseSettings):
     SILVER_MAX_TOKEN: int = 25000
     GOLD_MAX_TOKEN: int = 60000
     DIAMOND_MAX_TOKEN: int = 120000
+    BRONZE_ENABLED: bool = True
+    SILVER_ENABLED: bool = True
+    GOLD_ENABLED: bool = True
+    DIAMOND_ENABLED: bool = True
     BOT_ENABLED: bool = True
     REPORT_CHANNEL_ID: int | None = None
     PROCESSED_REQUESTS_CHANNEL_ID: int | None = None
@@ -51,6 +56,12 @@ class Settings(BaseSettings):
         if isinstance(v, int):
             return [v]
         return v or []
+
+    @validator("DAILY_RESET", pre=True)
+    def parse_daily_reset(cls, v):
+        if isinstance(v, str) and v.strip().lower() not in ("true", "false"):
+            raise ValueError("DAILY_RESET must be true or false")
+        return v
 
     @validator("REPORT_CHANNEL_ID", pre=True)
     def parse_report_channel(cls, v):

@@ -43,9 +43,13 @@ PLAN_TAGS = {"bronze": "", "silver": "⭐️ محبوب‌ترین", "gold": "",
 
 GENERATING = "⏳ در حال تGENERATING..."
 GENERATION_SUCCESS = "✅ تصویر با موفقیت ساخته شد!"
-LIMIT_REACHED_BUY = "⚠️ سقف استفاده شما تمام شده است.\nبرای ساخت تصاویر بیشتر باید اشتراک تهیه کنید 👇"
+INSUFFICIENT_CREDITS = (
+    "⚠️ اعتبار باقی‌مانده شما برای ساخت تصویر کافی نیست.\n"
+    "برای ادامه باید حداقل اعتبار لازم را داشته باشید.\n"
+    "برای ساخت و ویرایش عکس‌های بیشتر باید اشتراک تهیه کنی."
+)
 FREE_DISABLED = "⚠️ ساخت تصویر رایگان در حال حاضر غیرفعال است.\nبرای ادامه، یکی از پلن‌های پریمیوم را تهیه کنید 👇"
-CREDIT_LOW = "🎁 فقط ۱ فرصت باقی مانده!"
+CREDIT_LOW = "🎁 برای ساخت و ویرایش تصاویر بیشتر اشتراک تهیه کن"
 CREDIT_SPENT = "⚠️ اعتبار شما تمام شد!\nبرای ادامه ساخت تصویر، اشتراک تهیه کنید 👇"
 PLAN_DEACTIVATED_LOW_BALANCE = (
     "⚠️ اشتراک شما غیرفعال شد.\n"
@@ -71,6 +75,7 @@ SETTINGS_SIZE_BTN = "📐 اندازه تصویر"
 SETTINGS_BACK = "⬅️ بازگشت"
 SIZE_TITLE = "📐 اندازه تصویر خروجی رو انتخاب کن:"
 SIZE_SET = "✅ اندازه تصویر روی {label} تنظیم شد."
+SIZE_LOCKED = "🔒 این اندازه مخصوص کاربران پریمیوم است.\nبرای استفاده از این اندازه باید اشتراک فعال داشته باشی."
 
 # Model
 MODEL_TITLE = "مدل تولید تصویر رو انتخاب کن:"
@@ -110,6 +115,8 @@ PREMIUM_BRONZE = "🥉 برنزی — {price} تومان\n۱۰ تصویر در �
 PREMIUM_SILVER = "🥈 نقره‌ای — {price} تومان\n۲۵ تصویر در روز"
 PREMIUM_GOLD = "🥇 طلایی — {price} تومان\n۵۰ تصویر در روز"
 PREMIUM_CURRENT = "📦 پلن فعلی شما: {tier}"
+NO_PLANS_AVAILABLE = "⚠️ در حال حاضر پلنی برای خرید موجود نیست."
+PLAN_UNAVAILABLE = "⚠️ این پلن در حال حاضر موجود نیست."
 # Balance
 BALANCE_TITLE = "📊 موجودی شما\n\nremain از total تصویر در روز"
 
@@ -138,19 +145,11 @@ ADMIN_STATS = (
     "💎 خرید امروز:\n"
     "  کلیک اشتراک: {click_unique} نفر ({click_total} کلیک)\n"
     "  مشاهده قیمت: {pricing_viewers} نفر (جدید: {pricing_new} نفر)\n"
-    "  انتخاب پلن: 🥉{plan_bronze} 🥈{plan_silver} 🥇{plan_gold} 💎{plan_diamond}\n"
+    "  انتخاب پلن: {plan_selection}\n"
     "  شروع پرداخت: {pay_started} | موفق: {pay_success}\n\n"
     "🖼 تصاویر امروز:\n"
-    "  آزاد: {free_images}\n"
-    "  برنزی: {bronze_images}\n"
-    "  نقره‌ای: {silver_images}\n"
-    "  طلایی: {gold_images}\n"
-    "  الماسی: {diamond_images}\n\n"
-    "💎 پریمیوم‌ها:\n"
-    "  برنزی: {bronze_users}\n"
-    "  نقره‌ای: {silver_users}\n"
-    "  طلایی: {gold_users}\n"
-    "  الماسی: {diamond_users}\n\n"
+    "  آزاد: {free_images}{plan_images}\n\n"
+    "💎 پریمیوم‌ها:{plan_users}\n\n"
     "🛠 دستورات مدیر:\n"
     "  /stats — آمار کلی\n"
     "  /set_premium <user_id> <tier> — تغییر پلن\n"

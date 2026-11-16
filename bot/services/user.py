@@ -420,6 +420,37 @@ async def normalize_users_on_startup(session: AsyncSession) -> dict:
     return counts
 
 
+async def run_daily_reset() -> None:
+    """Refill every free user to FREE_USAGE_TOKEN; no-op unless DAILY_RESET."""
+    if not settings.DAILY_RESET:
+        return
+    from bot.db.engine import async_session
+    async with async_session() as session:
+        await reset_all_daily(session, include_free=True)
+    logger.info("Daily reset: free credits refilled to %d", settings.FREE_USAGE_TOKEN)
+
+
+def start_daily_reset_scheduler():
+    """Start the daily 00:00 Asia/Tehran free-credit reset job."""
+    from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    from apscheduler.triggers.cron import CronTrigger
+    from bot.utils.timezone import IRAN_TZ
+
+    scheduler = AsyncIOScheduler(timezone=IRAN_TZ)
+    scheduler.add_job(
+        run_daily_reset,
+        CronTrigger(hour=0, minute=0, timezone=IRAN_TZ),
+        id="daily_free_reset",
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=3600,
+        replace_existing=True,
+    )
+    scheduler.start()
+    logger.info("Daily free-credit reset scheduled at 00:00 Asia/Tehran")
+    return scheduler
+
+
 async def reset_all_daily(session: AsyncSession, include_free: bool = True) -> None:
     """Refill free users to the configured free credit grant.
 

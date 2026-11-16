@@ -3,7 +3,7 @@ from aiogram.types import Message, CallbackQuery
 from bot.services.user import get_or_create_user, set_quality, set_size, VALID_QUALITIES
 from bot.services.models import (
     default_model, images_per_quality, VALID_IMAGE_SIZES,
-    size_label, DEFAULT_IMAGE_SIZE,
+    size_label, effective_size, size_allowed,
 )
 from bot.keyboards.inline import (
     quality_keyboard, size_keyboard, settings_hub_keyboard, confirm_keyboard
@@ -19,7 +19,7 @@ def _current_quality(user) -> str:
 
 
 def _current_size(user) -> str:
-    return user.image_size or DEFAULT_IMAGE_SIZE
+    return effective_size(user.tier, user.image_size)
 
 
 def _estimates_text(user) -> str:
@@ -105,7 +105,7 @@ async def settings_size(callback: CallbackQuery, session):
     user = await get_or_create_user(session, callback.from_user.id)
     await callback.message.edit_text(
         badge(_size_menu_text(user)),
-        reply_markup=size_keyboard(_current_size(user), show_back=True),
+        reply_markup=size_keyboard(user.tier, _current_size(user), show_back=True),
     )
     await callback.answer()
 
@@ -145,6 +145,10 @@ async def size_set(callback: CallbackQuery, session):
         return
 
     user = await get_or_create_user(session, callback.from_user.id)
+    if not size_allowed(user.tier, value):
+        await callback.answer(texts.SIZE_LOCKED, show_alert=True)
+        return
+
     await set_size(session, user, value)
     try:
         await callback.message.edit_text(

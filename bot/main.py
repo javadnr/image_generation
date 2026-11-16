@@ -90,6 +90,11 @@ async def main():
 
     dp.startup.register(on_startup)
 
+    # Daily free-credit refill (00:00 Asia/Tehran), primary instance only.
+    if settings.DAILY_RESET and settings.API_SERVER != "bale":
+        from bot.services.user import start_daily_reset_scheduler
+        start_daily_reset_scheduler()
+
     # Daily DB backup runs on the primary (Telegram) instance only, so the
     # Bale container never starts a duplicate scheduler.
     if settings.BACKUP_ENABLED and settings.API_SERVER != "bale":

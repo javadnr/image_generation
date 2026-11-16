@@ -10,7 +10,8 @@ from bot.services.analytics import (
     PLAN_SELECTED, PAYMENT_STARTED,
 )
 from bot.services.models import (
-    PLANS, plan_allowance, default_model, images_per_quality,
+    PLANS, enabled_plans, plan_enabled, plan_allowance, default_model,
+    images_per_quality,
 )
 from bot.services.payment import (
     create_zarinpal_purchase, verify_zarinpal_payment,
@@ -18,7 +19,7 @@ from bot.services.payment import (
 )
 from bot.services.pricing import plan_price_toman, last_known_rate
 from bot.services.discounts import get_active_discounts, discount_for
-from bot.keyboards.inline import premium_menu
+from bot.keyboards.inline import premium_menu, plans_button
 from bot.utils.timezone import jalali_date
 from bot.keyboards.reply import main_menu
 from bot.db.engine import async_session
@@ -106,7 +107,10 @@ def premium_text(user, discounts: dict | None = None) -> str:
             f"⏳ روزهای باقی‌مانده: {remaining}"
         )
 
-    plan_blocks = "\n\n".join(_plan_block(tier, discounts) for tier in PLANS)
+    plans = enabled_plans()
+    if not plans:
+        return badge(texts.NO_PLANS_AVAILABLE)
+    plan_blocks = "\n\n".join(_plan_block(tier, discounts) for tier in plans)
     free_block = (
         f"🆓 پلن رایگان\n"
         f"• {settings.FREE_USAGE_TOKEN:,} اعتبار\n\n"
@@ -129,7 +133,7 @@ async def answer_quota_exceeded(message: Message, session, user, discounts: dict
     if user.tier == "free" and not settings.ALLOW_FREE:
         await message.answer(badge(texts.FREE_DISABLED))
     elif user.tier == "free":
-        await message.answer(badge(texts.LIMIT_REACHED_BUY))
+        await message.answer(badge(texts.INSUFFICIENT_CREDITS), reply_markup=plans_button())
     else:
         await message.answer(badge(texts.INSUFFICIENT_BALANCE))
     if discounts is None:
@@ -166,8 +170,8 @@ async def show_plans(callback: CallbackQuery, session):
 @router.callback_query(F.data.startswith("buy_"))
 async def buy_tier(callback: CallbackQuery, session):
     tier = callback.data.replace("buy_", "")
-    if tier not in PLANS:
-        await callback.answer(texts.ADMIN_INVALID_TIER, show_alert=True)
+    if tier not in PLANS or not plan_enabled(tier):
+        await callback.answer(texts.PLAN_UNAVAILABLE, show_alert=True)
         return
 
     user = await get_or_create_user(session, callback.from_user.id)
@@ -262,6 +266,7 @@ async def handle_check_payment(callback: CallbackQuery, session):
             amount=result.get("amount"),
             expire_dt=result.get("expire_dt"),
             paid_at=result.get("paid_at"),
+            source=result.get("source"),
         )
         await callback.answer()
     elif result.get("reason") == "link_expired":

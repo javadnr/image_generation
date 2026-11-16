@@ -413,3 +413,15 @@ async def test_threshold_reads_config_not_hardcoded(db, catalog, monkeypatch):
 async def test_none_model_falls_back_to_default(db, catalog):
     user = await _make_user(db, 1007, tier="gold", token_balance=10, model=None)
     assert await user_svc.maybe_deactivate_low_balance(db, user) is True
+
+
+def test_capped_charge_never_exceeds_balance(monkeypatch):
+    from bot.config import settings
+    from bot.services.models import capped_charge
+
+    monkeypatch.setattr(settings, "PROFIT_PERCENTAGE", 0)
+    # Real cost 500, balance 300 -> deduct 300, charge stays 500.
+    assert capped_charge(300, 500) == (500, 300)
+    assert capped_charge(1000, 500) == (500, 500)
+    assert capped_charge(0, 500) == (500, 0)
+    assert capped_charge(300, None) == (0, 0)

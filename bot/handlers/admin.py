@@ -10,7 +10,7 @@ from bot.services.user import (
     get_source_stats,
 )
 from bot.services import analytics as az
-from bot.services.models import images_per_quality, default_model, PLANS
+from bot.services.models import images_per_quality, default_model, PLANS, enabled_plans
 from bot.services.payment import activate_plan, deactivate_plan
 from bot.keyboards.inline import admin_status, plans_button
 from bot.keyboards.reply import main_menu
@@ -59,15 +59,12 @@ async def bot_status(message: Message, session):
     joined_today = await get_joined_today_count(session)
 
     free_images = await get_tier_images_today(session, "free")
-    bronze_images = await get_tier_images_today(session, "bronze")
-    silver_images = await get_tier_images_today(session, "silver")
-    gold_images = await get_tier_images_today(session, "gold")
-    diamond_images = await get_tier_images_today(session, "diamond")
-
-    bronze_users = await get_tier_users_count(session, "bronze")
-    silver_users = await get_tier_users_count(session, "silver")
-    gold_users = await get_tier_users_count(session, "gold")
-    diamond_users = await get_tier_users_count(session, "diamond")
+    tier_images = {
+        tier: await get_tier_images_today(session, tier) for tier in PLANS
+    }
+    tier_users = {
+        tier: await get_tier_users_count(session, tier) for tier in PLANS
+    }
 
     started_today = await az.get_images_started_today(session)
     success_today = await az.get_images_success_today(session)
@@ -78,6 +75,17 @@ async def bot_status(message: Message, session):
     plan_sel = await az.get_plan_selection_today(session)
     pay_started, pay_success = await az.get_payments_today(session)
     source_stats = await get_source_stats(session)
+
+    plans = enabled_plans()
+    plan_selection = " ".join(
+        f"{texts.PLAN_EMOJI[tier]}{plan_sel.get(tier, 0)}" for tier in plans
+    ) or "—"
+    plan_images = "".join(
+        f"\n  {texts.TIER_NAMES_FA[tier]}: {tier_images[tier]}" for tier in plans
+    )
+    plan_users = "".join(
+        f"\n  {texts.TIER_NAMES_FA[tier]}: {tier_users[tier]}" for tier in plans
+    )
 
     status_text = "فعال" if bot_enabled else "غیرفعال"
     premium_buy_text = "فعال" if premium_buy_enabled else "غیرفعال"
@@ -96,21 +104,12 @@ async def bot_status(message: Message, session):
             click_unique=click_unique,
             pricing_viewers=pricing_viewers,
             pricing_new=pricing_new,
-            plan_bronze=plan_sel.get("bronze", 0),
-            plan_silver=plan_sel.get("silver", 0),
-            plan_gold=plan_sel.get("gold", 0),
-            plan_diamond=plan_sel.get("diamond", 0),
+            plan_selection=plan_selection,
             pay_started=pay_started,
             pay_success=pay_success,
             free_images=free_images,
-            bronze_images=bronze_images,
-            silver_images=silver_images,
-            gold_images=gold_images,
-            diamond_images=diamond_images,
-            bronze_users=bronze_users,
-            silver_users=silver_users,
-            gold_users=gold_users,
-            diamond_users=diamond_users,
+            plan_images=plan_images,
+            plan_users=plan_users,
         )
     )
 
@@ -243,11 +242,6 @@ async def set_premium_cmd(message: Message, session):
     user = await set_tier(session, user_id, tier)
     if user:
         await message.answer(badge(texts.ADMIN_ACTIVATED.format(tier=tier, user_id=user_id)))
-        from bot.services.report import send_premium_report
-        if tier != "free":
-            await send_premium_report(
-                message.bot, user_id, tier, expire_dt=user.premium_expire_date
-            )
     else:
         await message.answer(badge(f"⚠️ کاربر با ID {user_id} یافت نشد."))
 
@@ -291,11 +285,6 @@ async def activate_cmd(message: Message, session):
 
     await activate_plan(session, user, tier, days)
     await message.answer(badge(texts.ADMIN_ACTIVATED.format(tier=tier, user_id=user_id)))
-
-    from bot.services.report import send_premium_report
-    await send_premium_report(
-        message.bot, user_id, tier, expire_dt=user.premium_expire_date
-    )
 
     expire = jalali_date(user.premium_expire_date)
     model = user.image_model or default_model()
@@ -544,7 +533,8 @@ async def userinfo_cmd(message: Message, session):
         f"💰 موجودی: {user.token_balance or 0:,}\n"
         f"🖼 تصاویر ساخته‌شده: {images}\n"
         f"📅 پایان اشتراک: {expire}\n"
-        f"🆕 عضویت: {joined}"
+        f"🆕 عضویت: {joined}\n"
+        f"🧭 منبع آشنایی: {user.source or texts.SOURCE_UNKNOWN}"
     ))
 
 
