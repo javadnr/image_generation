@@ -32,7 +32,7 @@ HELP_TEXT = (
     "💡 تفاوت دو حالت: در ویرایش، خود عکس اصلی تغییر می‌کنه؛ در حالت مرجع، یک تصویر جدید بر اساس عکس تو ساخته می‌شه."
 )
 
-TIER_NAMES_FA = {"bronze": "برنزی", "silver": "نقره‌ای", "gold": "طلایی", "diamond": "الماسی"}
+TIER_NAMES_FA = {"free": "آزاد", "bronze": "برنزی", "silver": "نقره‌ای", "gold": "طلایی", "diamond": "الماسی"}
 
 # Shown for users who started the bot without a deep-link parameter.
 SOURCE_UNKNOWN = "نامشخص (مستقیم)"

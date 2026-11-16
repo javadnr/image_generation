@@ -341,6 +341,7 @@ async def _run_generation(message, session, user, prompt_text, tg_user, bot, gen
             remaining=user.token_balance,
             balance_before=balance_before,
             deducted=deducted,
+            tier=queue_tier,
         )
 
     except Exception as e:

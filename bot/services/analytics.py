@@ -18,10 +18,6 @@ from bot.utils.timezone import tehran_day_utc_window, today_in_tehran
 logger = logging.getLogger(__name__)
 
 
-def is_admin(telegram_id: int) -> bool:
-    return telegram_id in (settings.ADMIN_IDS or [])
-
-
 def non_admin_criteria():
     """SQLAlchemy criteria excluding admin users. None when no admins configured."""
     if settings.ADMIN_IDS:
@@ -62,10 +58,9 @@ async def log_event(
 ) -> None:
     """Log an analytics event. Never raises — analytics must not break the main flow.
 
-    Admin actions are never logged so testing doesn't pollute reports.
+    Admin events are logged too (e.g. /userinfo counts them); aggregates
+    exclude admins via exclude_admins().
     """
-    if is_admin(user.telegram_id):
-        return
     try:
         session.add(UserEvent(user_id=user.id, event_type=event_type, event_meta=meta))
         await session.commit()

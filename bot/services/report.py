@@ -103,6 +103,7 @@ async def send_processed_report(
     remaining: int | None = None,
     balance_before: int | None = None,
     deducted: int | None = None,
+    tier: str | None = None,
 ) -> None:
     """Send processed request (prompt, tokens, user, pictures) to the channel. Never raises."""
     channel_id = settings.PROCESSED_REQUESTS_CHANNEL_ID
@@ -117,6 +118,7 @@ async def send_processed_report(
         "─────────────────\n"
         f"👤 شناسه کاربر: {user_id}\n"
         f"⚙️ عملیات: {OPERATION_FA.get(operation, operation)}\n"
+        f"📦 پلن: {texts.TIER_NAMES_FA.get(tier, tier or '—')}\n"
         f"📝 پرامپت: {prompt[:400] or '—'}\n"
         f"🔢 توکن مصرفی (API): {tokens if tokens is not None else '—'}\n"
         f"➕ با سود: {charged if charged is not None else '—'}\n"

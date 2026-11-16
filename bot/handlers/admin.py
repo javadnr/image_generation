@@ -14,7 +14,7 @@ from bot.services.models import images_per_quality, default_model, PLANS, enable
 from bot.services.payment import activate_plan, deactivate_plan
 from bot.keyboards.inline import admin_status, plans_button
 from bot.keyboards.reply import main_menu
-from bot.utils.timezone import jalali_date
+from bot.utils.timezone import jalali_date, jalali_datetime
 from bot.db.engine import async_session
 from sqlalchemy import select, update
 from bot.db.models import BotSettings, User
@@ -522,7 +522,7 @@ async def userinfo_cmd(message: Message, session):
     images = img_result.scalar() or 0
 
     expire = jalali_date(user.premium_expire_date)
-    joined = jalali_date(user.created_at)
+    joined = jalali_datetime(user.created_at)
     await message.answer(badge(
         "👤 اطلاعات کاربر\n"
         "─────────────────\n"

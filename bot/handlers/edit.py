@@ -221,6 +221,7 @@ async def confirm_yes_edit(callback: CallbackQuery, session):
             remaining=user.token_balance,
             balance_before=balance_before,
             deducted=deducted,
+            tier=queue_tier,
         )
 
     except Exception as e:

@@ -461,17 +461,18 @@ def admin_ids(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_admin_events_not_logged(db, admin_ids):
+async def test_admin_events_logged_but_excluded_from_aggregates(db, admin_ids):
     admin = await _make_user(db, 999001)
     await db.commit()
 
     await az.log_event(db, admin, az.IMAGE_GENERATION_SUCCESS)
     await az.log_event(db, admin, az.BUY_SUBSCRIPTION_CLICKED)
-    await az.ensure_user_started(db, admin)
 
-    assert await _count_events(db, az.IMAGE_GENERATION_SUCCESS) == 0
-    assert await _count_events(db, az.BUY_SUBSCRIPTION_CLICKED) == 0
-    assert await _count_events(db, az.USER_STARTED) == 0
+    # logged so per-user views (/userinfo) see them
+    assert await _count_events(db, az.IMAGE_GENERATION_SUCCESS) == 1
+    assert await _count_events(db, az.BUY_SUBSCRIPTION_CLICKED) == 1
+    # but global aggregates still ignore admins
+    assert await az.get_images_success_today(db) == 0
 
 
 @pytest.mark.asyncio

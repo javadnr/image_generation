@@ -59,9 +59,11 @@ async def test_processed_report_shows_actual_cost_and_capped_deduction(monkeypat
         remaining=0,
         balance_before=300,
         deducted=300,
+        tier="free",
     )
     caption = bot.captions[0]
     assert "🔢 توکن مصرفی (API): 500" in caption
+    assert "📦 پلن: آزاد" in caption
     assert "📊 موجودی قبل از کسر: 300" in caption
     assert "➖ کسر شده از کاربر: 300" in caption
     assert "💰 باقی‌مانده: 0" in caption
