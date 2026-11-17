@@ -3,7 +3,7 @@ from sqlalchemy import select
 
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-from bot.services.user import get_or_create_user
+from bot.services.user import get_or_create_user, free_generation_enabled
 from bot.services.report import send_premium_report
 from bot.services.analytics import (
     log_event, maybe_log_free_limit, PRICING_VIEWED, BUY_SUBSCRIPTION_CLICKED,
@@ -92,7 +92,7 @@ def _plan_block(tier: str, discounts: dict | None) -> str:
     )
 
 
-def premium_text(user, discounts: dict | None = None) -> str:
+def premium_text(user, discounts: dict | None = None, allow_free: bool | None = None) -> str:
     if user.tier != "free" and user.premium_expire_date:
         expire = jalali_date(user.premium_expire_date)
         remaining = (user.premium_expire_date.date() - datetime.now().date()).days
@@ -114,7 +114,7 @@ def premium_text(user, discounts: dict | None = None) -> str:
     free_block = (
         f"🆓 پلن رایگان\n"
         f"• {settings.FREE_USAGE_TOKEN:,} اعتبار\n\n"
-        if settings.ALLOW_FREE else ""
+        if (settings.ALLOW_FREE if allow_free is None else allow_free) else ""
     )
     return badge(
         f"💎 پلن‌های پریمیوم\n\n"
@@ -130,7 +130,8 @@ def premium_text(user, discounts: dict | None = None) -> str:
 async def answer_quota_exceeded(message: Message, session, user, discounts: dict | None = None) -> None:
     """Tell the user they must buy for more, then show the plans."""
     await maybe_log_free_limit(session, user)
-    if user.tier == "free" and not settings.ALLOW_FREE:
+    allow_free = await free_generation_enabled(session)
+    if user.tier == "free" and not allow_free:
         await message.answer(badge(texts.FREE_DISABLED))
     elif user.tier == "free":
         await message.answer(badge(texts.INSUFFICIENT_CREDITS), reply_markup=plans_button())
@@ -138,7 +139,10 @@ async def answer_quota_exceeded(message: Message, session, user, discounts: dict
         await message.answer(badge(texts.INSUFFICIENT_BALANCE))
     if discounts is None:
         discounts = await get_active_discounts(session)
-    await message.answer(premium_text(user, discounts), reply_markup=premium_menu(user, discounts))
+    await message.answer(
+        premium_text(user, discounts, allow_free),
+        reply_markup=premium_menu(user, discounts),
+    )
 
 
 @router.message(F.text == texts.MAIN_MENU_PREMIUM)
@@ -156,14 +160,22 @@ async def premium(message: Message, session):
     await log_event(session, user, BUY_SUBSCRIPTION_CLICKED)
     await log_event(session, user, PRICING_VIEWED)
     discounts = await get_active_discounts(session)
-    await message.answer(premium_text(user, discounts), reply_markup=premium_menu(user, discounts))
+    allow_free = await free_generation_enabled(session)
+    await message.answer(
+        premium_text(user, discounts, allow_free),
+        reply_markup=premium_menu(user, discounts),
+    )
 
 
 @router.callback_query(F.data == "show_plans")
 async def show_plans(callback: CallbackQuery, session):
     user = await get_or_create_user(session, callback.from_user.id)
     discounts = await get_active_discounts(session)
-    await callback.message.answer(premium_text(user, discounts), reply_markup=premium_menu(user, discounts))
+    allow_free = await free_generation_enabled(session)
+    await callback.message.answer(
+        premium_text(user, discounts, allow_free),
+        reply_markup=premium_menu(user, discounts),
+    )
     await callback.answer()
 
 
@@ -281,5 +293,9 @@ async def handle_check_payment(callback: CallbackQuery, session):
 async def back_to_premium(callback: CallbackQuery, session):
     user = await get_or_create_user(session, callback.from_user.id)
     discounts = await get_active_discounts(session)
-    await callback.message.edit_text(premium_text(user, discounts), reply_markup=premium_menu(user, discounts))
+    allow_free = await free_generation_enabled(session)
+    await callback.message.edit_text(
+        premium_text(user, discounts, allow_free),
+        reply_markup=premium_menu(user, discounts),
+    )
     await callback.answer()

@@ -1,6 +1,6 @@
 from aiogram import Router, F
 from aiogram.types import Message
-from bot.services.user import get_or_create_user, can_generate
+from bot.services.user import get_or_create_user, can_generate, free_generation_enabled
 from bot.services.models import default_model, images_per_quality
 from bot.keyboards.reply import main_menu
 from bot.keyboards.inline import plans_button
@@ -14,10 +14,9 @@ TIER_NAMES_FA = {"free": "آزاد", "bronze": "برنزی", "silver": "نقره
 
 @router.message(F.text == texts.MAIN_MENU_BALANCE)
 async def balance(message: Message, session):
-    from bot.config import settings
     user = await get_or_create_user(session, message.from_user.id)
 
-    if user.tier == "free" and not settings.ALLOW_FREE:
+    if user.tier == "free" and not await free_generation_enabled(session):
         await message.answer(badge(texts.FREE_DISABLED), reply_markup=plans_button())
         return
 

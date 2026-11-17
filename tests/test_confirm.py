@@ -175,6 +175,6 @@ def test_revision_chain_valid():
     cfg = Config("alembic.ini")
     cfg.set_main_option("script_location", "alembic")
     script = ScriptDirectory.from_config(cfg)
-    assert script.get_heads() == ["0010_free_images_generated"]
+    assert script.get_heads() == ["0011_free_enabled"]
     rev = script.get_revision("0010_free_images_generated")
     assert rev.down_revision == "0009_premium_buy_enabled"

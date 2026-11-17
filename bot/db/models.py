@@ -105,3 +105,5 @@ class BotSettings(Base):
     id = Column(Integer, primary_key=True, default=1)
     bot_enabled = Column(Boolean, default=True)
     premium_buy_enabled = Column(Boolean, default=True)
+    # NULL = follow the ALLOW_FREE env default; admin toggle sets it explicitly.
+    free_enabled = Column(Boolean, nullable=True)

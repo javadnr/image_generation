@@ -47,9 +47,18 @@ async def get_or_create_user(session: AsyncSession, telegram_id: int) -> User:
     return user
 
 
-def free_generation_enabled() -> bool:
-    """Whether free-tier users may generate at all (ALLOW_FREE env flag)."""
-    return bool(settings.ALLOW_FREE)
+async def free_generation_enabled(session: AsyncSession) -> bool:
+    """Whether free-tier users may generate at all.
+
+    The admin toggle (bot_settings.free_enabled) wins; NULL means follow the
+    ALLOW_FREE env default.
+    """
+    from bot.db.models import BotSettings
+    result = await session.execute(
+        select(BotSettings.free_enabled).where(BotSettings.id == 1)
+    )
+    value = result.scalar_one_or_none()
+    return bool(settings.ALLOW_FREE) if value is None else bool(value)
 
 
 # Acquisition-source attribution. Fully dynamic: any valid Telegram start
@@ -115,7 +124,7 @@ async def get_source_stats(session: AsyncSession) -> list:
 async def can_generate(session: AsyncSession, user: User) -> bool:
     """Unified pre-check for every tier.
 
-    Free-tier users are blocked outright when ALLOW_FREE is off, regardless
+    Free-tier users are blocked outright when free usage is disabled, regardless
     of their remaining free credits — the single backend choke point shared
     by every generation path.
 
@@ -125,7 +134,7 @@ async def can_generate(session: AsyncSession, user: User) -> bool:
     flooring it at zero.
     """
     from bot.services.models import estimate_tokens, default_model
-    if user.tier == "free" and not free_generation_enabled():
+    if user.tier == "free" and not await free_generation_enabled(session):
         return False
     required = estimate_tokens(
         user.image_model or default_model(),

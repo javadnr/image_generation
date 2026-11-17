@@ -44,6 +44,13 @@ def _sources_block(stats: list) -> str:
     return "\n".join(lines)
 
 
+def _free_enabled(settings_row) -> bool:
+    """Free usage state: admin override wins over the ALLOW_FREE env default."""
+    if settings_row is None or settings_row.free_enabled is None:
+        return bool(settings.ALLOW_FREE)
+    return bool(settings_row.free_enabled)
+
+
 @router.message(F.text == texts.MAIN_MENU_ADMIN)
 async def bot_status(message: Message, session):
     if message.from_user.id not in settings.ADMIN_IDS:
@@ -53,6 +60,7 @@ async def bot_status(message: Message, session):
     settings_row = result.scalar_one_or_none()
     bot_enabled = settings_row.bot_enabled if settings_row else True
     premium_buy_enabled = settings_row.premium_buy_enabled if settings_row else True
+    free_enabled = _free_enabled(settings_row)
 
     total_users = await get_all_users_count(session)
     active_today = await get_active_today_count(session)
@@ -113,7 +121,10 @@ async def bot_status(message: Message, session):
         )
     )
 
-    await message.answer(text, reply_markup=admin_status(bot_enabled, premium_buy_enabled))
+    await message.answer(
+        text,
+        reply_markup=admin_status(bot_enabled, premium_buy_enabled, free_enabled),
+    )
 
 
 @router.callback_query(F.data == "toggle_bot")
@@ -138,7 +149,11 @@ async def toggle_bot(callback: CallbackQuery, session):
 
     await callback.message.edit_text(
         badge(f"📊 وضعیت ربات\n\n🟢 وضعیت: {new_status}"),
-        reply_markup=admin_status(settings_row.bot_enabled),
+        reply_markup=admin_status(
+            settings_row.bot_enabled,
+            settings_row.premium_buy_enabled,
+            _free_enabled(settings_row),
+        ),
     )
     await callback.answer(toggle_text)
 
@@ -168,8 +183,43 @@ async def toggle_premium_buy(callback: CallbackQuery, session):
     )
 
     await callback.message.edit_text(
-        badge(f"📊 وضعیت ربات\n\n🟢 وضعیت: {new_status}"),
-        reply_markup=admin_status(settings_row.bot_enabled, settings_row.premium_buy_enabled),
+        badge(f"📊 وضعیت ربات\n\n💳 خرید اشتراک: {new_status}"),
+        reply_markup=admin_status(
+            settings_row.bot_enabled,
+            settings_row.premium_buy_enabled,
+            _free_enabled(settings_row),
+        ),
+    )
+    await callback.answer(toggle_text)
+
+
+@router.callback_query(F.data == "toggle_free")
+async def toggle_free(callback: CallbackQuery, session):
+    if callback.from_user.id not in settings.ADMIN_IDS:
+        await callback.answer("⛔ دسترسی ندارید.", show_alert=True)
+        return
+
+    result = await session.execute(select(BotSettings).where(BotSettings.id == 1))
+    settings_row = result.scalar_one_or_none()
+
+    if settings_row:
+        settings_row.free_enabled = not _free_enabled(settings_row)
+    else:
+        settings_row = BotSettings(id=1, free_enabled=not settings.ALLOW_FREE)
+        session.add(settings_row)
+
+    await session.commit()
+
+    new_status = "فعال" if settings_row.free_enabled else "غیرفعال"
+    toggle_text = texts.ADMIN_FREE_ON if settings_row.free_enabled else texts.ADMIN_FREE_OFF
+
+    await callback.message.edit_text(
+        badge(f"📊 وضعیت ربات\n\n🆓 استفاده رایگان: {new_status}"),
+        reply_markup=admin_status(
+            settings_row.bot_enabled,
+            settings_row.premium_buy_enabled,
+            settings_row.free_enabled,
+        ),
     )
     await callback.answer(toggle_text)
 

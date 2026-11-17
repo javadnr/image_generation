@@ -11,6 +11,7 @@ from types import SimpleNamespace
 
 import pytest
 import pytest_asyncio
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -110,6 +111,29 @@ async def test_free_allowed_on_backend_when_enabled(db, catalog, monkeypatch):
     monkeypatch.setattr(settings, "ALLOW_FREE", True)
     user = await _make_user(db, 9302, tier="free", token_balance=10000)
     assert await can_generate(db, user) is True
+
+
+@pytest.mark.asyncio
+async def test_admin_toggle_overrides_env_flag(db, catalog, monkeypatch):
+    """DB override (admin button) wins over ALLOW_FREE; NULL follows .env."""
+    from bot.config import settings
+    from bot.db.models import BotSettings
+    monkeypatch.setattr(settings, "ALLOW_FREE", True)
+    user = await _make_user(db, 9310, tier="free", token_balance=10000)
+
+    db.add(BotSettings(id=1, free_enabled=False))
+    await db.commit()
+    assert await can_generate(db, user) is False
+
+    row = (await db.execute(select(BotSettings))).scalar_one()
+    row.free_enabled = True
+    await db.commit()
+    assert await can_generate(db, user) is True
+
+    row.free_enabled = None
+    monkeypatch.setattr(settings, "ALLOW_FREE", False)
+    await db.commit()
+    assert await can_generate(db, user) is False
 
 
 @pytest.mark.asyncio
